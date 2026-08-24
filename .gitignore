@@ -1,0 +1,35 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# env
+.env
+.env.local
+.env.*.local
+
+# Next.js
+admin/.next/
+admin/out/
+admin/next-env.d.ts
+
+# Expo
+mobile/.expo/
+mobile/dist/
+mobile/web-build/
+mobile/*.jks
+mobile/*.p8
+mobile/*.p12
+mobile/*.key
+mobile/*.mobileprovision
+
+# misc
+.DS_Store
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Supabase local
+supabase/.branches
+supabase/.temp

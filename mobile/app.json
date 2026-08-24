@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "Noor",
+    "slug": "noor",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "backgroundColor": "#0e8a72"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.noor.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Noor uses your location to show prayer times, Qibla direction, and nearby masjids/halal food for where you are."
+      }
+    },
+    "android": {
+      "package": "com.noor.app",
+      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"]
+    },
+    "extra": {
+      "supabaseUrl": "https://YOUR_PROJECT.supabase.co",
+      "supabaseAnonKey": "your-anon-key"
+    }
+  }
+}

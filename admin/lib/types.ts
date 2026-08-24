@@ -1,0 +1,85 @@
+export type UserRole = "user" | "admin";
+
+export interface Profile {
+  id: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  role: UserRole;
+  created_at: string;
+}
+
+export interface Location {
+  id: string;
+  name: string;
+  country: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  timezone: string;
+  source: string | null;
+  is_default: boolean;
+}
+
+export interface PrayerTime {
+  id: string;
+  location_id: string;
+  month: number;
+  day: number;
+  fajr: string;
+  sunrise: string;
+  dhuhr: string;
+  asr: string;
+  maghrib: string;
+  isha: string;
+  jumma: string | null;
+}
+
+export type FoodCategory =
+  | "restaurant"
+  | "cafe"
+  | "bakery"
+  | "grocery"
+  | "butcher"
+  | "other";
+
+export interface Masjid {
+  id: string;
+  name: string;
+  address: string | null;
+  latitude: number;
+  longitude: number;
+  phone: string | null;
+  description: string | null;
+  photo_url: string | null;
+  jumma_time: string | null;
+  is_approved: boolean;
+  created_at: string;
+}
+
+export interface HalalFoodPlace {
+  id: string;
+  name: string;
+  category: FoodCategory;
+  address: string | null;
+  latitude: number;
+  longitude: number;
+  phone: string | null;
+  halal_certified: boolean;
+  description: string | null;
+  photo_url: string | null;
+  is_approved: boolean;
+  created_at: string;
+}
+
+export interface AiQaHistory {
+  id: string;
+  user_id: string | null;
+  question: string;
+  answer: string;
+  flagged: boolean;
+  created_at: string;
+}
+
+export const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
