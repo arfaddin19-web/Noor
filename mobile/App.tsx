@@ -1,5 +1,5 @@
 import "react-native-url-polyfill/auto";
-import React from "react";
+import React, { useEffect } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -13,6 +13,8 @@ import SurahDetailScreen from "./screens/SurahDetailScreen";
 import HadithScreen from "./screens/HadithScreen";
 import NearbyScreen from "./screens/NearbyScreen";
 import AskAiScreen from "./screens/AskAiScreen";
+import AccountScreen from "./screens/AccountScreen";
+import { setupAndroidNotificationChannel } from "./lib/notifications";
 
 export type QuranStackParamList = {
   QuranList: undefined;
@@ -41,6 +43,10 @@ function TabIcon({ emoji }: { emoji: string }) {
 }
 
 export default function App() {
+  useEffect(() => {
+    setupAndroidNotificationChannel();
+  }, []);
+
   return (
     <NavigationContainer>
       <StatusBar style="auto" />
@@ -74,6 +80,11 @@ export default function App() {
           name="Ask"
           component={AskAiScreen}
           options={{ tabBarIcon: () => <TabIcon emoji="💬" /> }}
+        />
+        <Tab.Screen
+          name="Account"
+          component={AccountScreen}
+          options={{ tabBarIcon: () => <TabIcon emoji="👤" /> }}
         />
       </Tab.Navigator>
     </NavigationContainer>

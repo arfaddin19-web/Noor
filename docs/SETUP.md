@@ -49,6 +49,17 @@ npx expo start
 ```
 Scan the QR code with Expo Go, or run `npm run ios` / `npm run android`.
 
+Notes:
+- The Account tab is optional for end users — the rest of the app (prayer times,
+  Qibla, Qur'an, Hadith, Nearby, Ask) all work signed-out. Signing up/in just attaches
+  Ask history to the account and lets prayer-time notifications persist a preference.
+- Prayer notifications are local, on-device (via `expo-notifications`) — no push
+  server setup is needed for them to work; toggle them from the Account tab, which
+  will prompt for OS notification permission the first time.
+- Run `npx expo install --fix` once after cloning to double check every Expo/React
+  Native package version is exactly what this Expo SDK expects — that check couldn't
+  run in the sandbox this was built in (see `docs/PROGRESS.md`).
+
 ## 4. AI Q&A edge function
 
 ```bash

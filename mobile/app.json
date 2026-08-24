@@ -35,6 +35,13 @@
           "resizeMode": "contain",
           "backgroundColor": "#0e8a72"
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/splash-icon.png",
+          "color": "#0e8a72"
+        }
       ]
     ],
     "extra": {
