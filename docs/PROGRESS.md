@@ -2,21 +2,28 @@
 
 ## Done
 
-- **Supabase schema** (`supabase/migrations/0001_init.sql`, `0002_rls.sql`): profiles
-  (role-based), locations, prayer_times, masjids, halal_food_places, ai_qa_history,
-  app_settings — with RLS (public read, admin write).
+- **Supabase schema** (`supabase/migrations/0001`–`0005`): profiles (role-based),
+  locations, prayer_times (national Adhan times), masjids (incl. per-prayer Jamat time
+  columns), halal_food_places, ai_qa_history, app_settings — with RLS (public read,
+  admin write).
 - **Prayer time data** transcribed from the IQRA Tutorial Hub calendar PDF and seeded
-  (`0003_seed_prayer_times.sql`, 366 rows = 365 days + Feb 29). Location guessed as
-  Bhairahawa, Nepal — **needs your confirmation**.
+  as a single nationwide **Nepal** location (`0003_seed_prayer_times.sql`, 366 rows =
+  365 days + Feb 29; `0005_update_default_location.sql` fixes the location to Nepal
+  per your confirmation).
+- **Adhan vs. Jamat**: `prayer_times` holds the national Adhan (start) times; each
+  masjid has its own Fajr/Dhuhr/Asr/Maghrib/Isha/Jumu'ah **Jamat** (congregation) time,
+  editable per-masjid from the admin dashboard (`0004_masjid_jamat_times.sql`).
 - **Admin dashboard** (Next.js, `/admin`): email/password login gated to admins,
-  overview stats, prayer times editor (per location/month), masjids CRUD with
-  approve/reject, halal food CRUD with approve/reject, AI Q&A log viewer with flagging.
+  overview stats, prayer times (Adhan) editor per location/month, masjids CRUD with
+  approve/reject and inline per-masjid Jamat time editing, halal food CRUD with
+  approve/reject, AI Q&A log viewer with flagging.
 - **Mobile app** (Expo/React Native, `/mobile`): bottom-tab navigation with
-  - Prayer Times home (today's times, live countdown to next prayer)
+  - Prayer Times home (today's Adhan times, live countdown to next prayer)
   - Qibla (compass bearing to the Kaaba using device location + magnetometer)
   - Qur'an (surah list + reader, Arabic + English translation via AlQuran Cloud API)
   - Hadith (browse major collections via a free hadith API)
-  - Nearby (masjids / halal food, sorted by distance from device GPS, tap to open in Maps)
+  - Nearby (masjids with their Jamat times / halal food, sorted by distance from
+    device GPS, tap to open in Maps)
   - Ask (AI Q&A chat UI wired to the `ask-ai` Supabase Edge Function)
 - **AI Q&A edge function** (`supabase/functions/ask-ai`): proxies to Claude with an
   Islamic-Q&A system prompt (encourages citing sources honestly, defers fiqh rulings to

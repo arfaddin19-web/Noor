@@ -50,7 +50,14 @@ export interface Masjid {
   phone: string | null;
   description: string | null;
   photo_url: string | null;
-  jumma_time: string | null;
+  /** Jamat (congregation) times set by/for this masjid — distinct from the
+   *  location-wide Adhan times in `prayer_times`. */
+  fajr_jamat: string | null;
+  dhuhr_jamat: string | null;
+  asr_jamat: string | null;
+  maghrib_jamat: string | null;
+  isha_jamat: string | null;
+  jumma_jamat: string | null;
   is_approved: boolean;
   created_at: string;
 }

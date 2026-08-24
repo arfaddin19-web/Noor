@@ -30,8 +30,24 @@ export interface Masjid {
   longitude: number;
   phone: string | null;
   description: string | null;
-  jumma_time: string | null;
+  /** Jamat (congregation) times set by this masjid — may differ from the
+   *  location-wide Adhan times shown on the Prayer Times tab. */
+  fajr_jamat: string | null;
+  dhuhr_jamat: string | null;
+  asr_jamat: string | null;
+  maghrib_jamat: string | null;
+  isha_jamat: string | null;
+  jumma_jamat: string | null;
 }
+
+export const JAMAT_LABELS: { key: keyof Masjid; label: string }[] = [
+  { key: "fajr_jamat", label: "Fajr" },
+  { key: "dhuhr_jamat", label: "Dhuhr" },
+  { key: "asr_jamat", label: "Asr" },
+  { key: "maghrib_jamat", label: "Maghrib" },
+  { key: "isha_jamat", label: "Isha" },
+  { key: "jumma_jamat", label: "Jumu'ah" },
+];
 
 export interface HalalFoodPlace {
   id: string;

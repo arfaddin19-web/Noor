@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import * as Location from "expo-location";
 import { supabase } from "../lib/supabase";
-import { Masjid, HalalFoodPlace } from "../lib/types";
+import { Masjid, HalalFoodPlace, JAMAT_LABELS } from "../lib/types";
 import { distanceKm, formatDistance } from "../lib/geo";
 
 type Mode = "masjids" | "halal";
@@ -106,8 +106,15 @@ export default function NearbyScreen() {
               {item.address && <Text style={styles.cardSubtitle}>{item.address}</Text>}
               <View style={styles.cardMeta}>
                 <Text style={styles.distance}>{formatDistance(item.distance)}</Text>
-                {item.jumma_time && (
-                  <Text style={styles.metaText}>Jumu'ah {item.jumma_time}</Text>
+              </View>
+              <View style={styles.jamatRow}>
+                {JAMAT_LABELS.map(({ key, label }) =>
+                  item[key] ? (
+                    <View key={key} style={styles.jamatChip}>
+                      <Text style={styles.jamatLabel}>{label}</Text>
+                      <Text style={styles.jamatTime}>{item[key]}</Text>
+                    </View>
+                  ) : null
                 )}
               </View>
             </TouchableOpacity>
@@ -161,4 +168,14 @@ const styles = StyleSheet.create({
   cardMeta: { flexDirection: "row", justifyContent: "space-between", marginTop: 10 },
   distance: { color: "#0e8a72", fontWeight: "700", fontSize: 13 },
   metaText: { color: "#6b7280", fontSize: 13, textTransform: "capitalize" },
+  jamatRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 10 },
+  jamatChip: {
+    backgroundColor: "#f2faf8",
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    alignItems: "center",
+  },
+  jamatLabel: { fontSize: 10, color: "#0e8a72", fontWeight: "600" },
+  jamatTime: { fontSize: 12, color: "#111827", fontWeight: "600" },
 });

@@ -7,9 +7,12 @@
    `supabase/migrations/` **in order**:
    - `0001_init.sql` — tables
    - `0002_rls.sql` — row-level security policies
-   - `0003_seed_prayer_times.sql` — seeds one default location ("Bhairahawa, Nepal" —
-     please confirm/correct this, see note below) with a full year of prayer times
-     transcribed from the IQRA Tutorial Hub table calendar you shared.
+   - `0003_seed_prayer_times.sql` — seeds one default location with a full year of
+     Adhan (start) times transcribed from the IQRA Tutorial Hub table calendar you
+     shared
+   - `0004_masjid_jamat_times.sql` — adds per-masjid Jamat (congregation) time columns
+   - `0005_update_default_location.sql` — corrects the seeded location to "Nepal"
+     (nationwide), per your confirmation that the calendar is a national schedule
 
    With the Supabase CLI installed and linked to your project:
    ```bash
@@ -56,17 +59,22 @@ supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
 ## Note on the prayer time data
 
 The prayer times were transcribed from the "IQRA Tutorial Hub" table calendar PDF you
-shared (12 monthly tables, Fajr/Sunrise/Zohr/Asr/Maghrib/Isha). The PDF itself didn't
-state a city or year, so:
+shared (12 monthly tables, Fajr/Sunrise/Zohr/Asr/Maghrib/Isha).
 
-- **Location**: guessed as **Bhairahawa, Nepal** from the calendar's `061` phone area
-  code (Bhairahawa/Siddharthanagar, Rupandehi district). **Please confirm or correct**
-  the name/coordinates in the `locations` table (or via the admin dashboard once it's
-  running).
+- **Location**: this is a single **nationwide Nepal** schedule, not a specific city —
+  the seeded `locations` row is named "Nepal" with a representative center point
+  (Kathmandu) rather than GPS coordinates that matter for lookup.
+- **Adhan vs. Jamat**: the calendar's times are **Adhan** (start-of-window) times —
+  the same for everyone in Nepal, stored in `prayer_times`. Each masjid separately sets
+  its own **Jamat** (congregation) time per prayer — often a few minutes after Adhan —
+  in the new `masjids.fajr_jamat` / `dhuhr_jamat` / `asr_jamat` / `maghrib_jamat` /
+  `isha_jamat` / `jumma_jamat` columns, editable per-masjid from the admin dashboard's
+  Masjids page. The mobile app's Prayer Times tab shows Adhan times; the Nearby tab
+  shows each masjid's Jamat times.
 - **Year-agnostic storage**: times are stored by `(month, day)`, not a specific year,
-  since the same printed local calendar is normally reused every year with only
+  since the same printed national calendar is normally reused every year with only
   sub-minute drift. February had 29 rows in the source (a leap year), so Feb 29 is
-  stored too — the app should fall back to Feb 28 in non-leap years (see
+  stored too — the app falls back to Feb 28 in non-leap years (see
   `mobile/lib/prayerLogic.ts`).
 - A copy of the raw transcribed data (before SQL conversion) is at
   `docs/prayer_times_raw.json` for reference/auditing.
