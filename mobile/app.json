@@ -45,8 +45,8 @@
       ]
     ],
     "extra": {
-      "supabaseUrl": "https://YOUR_PROJECT.supabase.co",
-      "supabaseAnonKey": "your-anon-key"
+      "supabaseUrl": "https://njivttoglciffuwqjefd.supabase.co",
+      "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5qaXZ0dG9nbGNpZmZ1d3FqZWZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc1ODkwNzMsImV4cCI6MjEwMzE2NTA3M30.E89P3l1BP06yGqB5-wWfRJzSU847IWb6xC3JGxE1N7U"
     }
   }
 }
