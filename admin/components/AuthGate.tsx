@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/useAuth";
 
@@ -8,6 +8,14 @@ import { useAuth } from "@/lib/useAuth";
 export default function AuthGate({ children }: { children: ReactNode }) {
   const { loading, profile, isAdmin } = useAuth();
   const router = useRouter();
+
+  // Redirects must happen as an effect, not during render — calling router.replace()
+  // while AuthGate itself is rendering trips React's "setState in render" guard.
+  useEffect(() => {
+    if (!loading && !profile) {
+      router.replace("/login");
+    }
+  }, [loading, profile, router]);
 
   if (loading) {
     return (
@@ -18,7 +26,6 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   }
 
   if (!profile) {
-    router.replace("/login");
     return null;
   }
 
