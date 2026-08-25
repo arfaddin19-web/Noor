@@ -20,7 +20,10 @@ interface Message {
   text: string;
 }
 
-const { supabaseUrl } = (Constants.expoConfig?.extra ?? {}) as { supabaseUrl?: string };
+const { supabaseUrl, supabaseAnonKey } = (Constants.expoConfig?.extra ?? {}) as {
+  supabaseUrl?: string;
+  supabaseAnonKey?: string;
+};
 const FUNCTION_URL = `${supabaseUrl}/functions/v1/ask-ai`;
 
 export default function AskAiScreen() {
@@ -51,11 +54,15 @@ export default function AskAiScreen() {
         data: { session },
       } = await supabase.auth.getSession();
 
+      // Supabase Edge Functions require a valid apikey/Authorization on every call,
+      // even for logic that should work anonymously — fall back to the public anon
+      // key when there's no signed-in user, same as any other Supabase request.
       const res = await fetch(FUNCTION_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.access_token ?? ""}`,
+          apikey: supabaseAnonKey ?? "",
+          Authorization: `Bearer ${session?.access_token ?? supabaseAnonKey ?? ""}`,
         },
         body: JSON.stringify({ question, user_id: session?.user?.id ?? null }),
       });
