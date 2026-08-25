@@ -9,13 +9,19 @@ import {
   FlatList,
 } from "react-native";
 import * as Location from "expo-location";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { HomeStackParamList } from "../App";
 import { supabase } from "../lib/supabase";
 import { Masjid, HalalFoodPlace, JAMAT_LABELS } from "../lib/types";
 import { distanceKm, formatDistance } from "../lib/geo";
 
+type Nav = NativeStackNavigationProp<HomeStackParamList, "Nearby">;
+
 type Mode = "masjids" | "halal";
 
 export default function NearbyScreen() {
+  const navigation = useNavigation<Nav>();
   const [mode, setMode] = useState<Mode>("masjids");
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [masjids, setMasjids] = useState<(Masjid & { distance: number })[]>([]);
@@ -100,7 +106,7 @@ export default function NearbyScreen() {
           renderItem={({ item }) => (
             <TouchableOpacity
               style={styles.card}
-              onPress={() => openMaps(item.latitude, item.longitude, item.name)}
+              onPress={() => navigation.navigate("MasjidDetail", { id: item.id })}
             >
               <Text style={styles.cardTitle}>{item.name}</Text>
               {item.address && <Text style={styles.cardSubtitle}>{item.address}</Text>}

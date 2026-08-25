@@ -2,14 +2,14 @@ import React, { useEffect, useState } from "react";
 import { ActivityIndicator, FlatList, StyleSheet, Text, View } from "react-native";
 import type { RouteProp } from "@react-navigation/native";
 import { useRoute } from "@react-navigation/native";
-import type { QuranStackParamList } from "../App";
+import type { HomeStackParamList } from "../App";
 
 interface Ayah {
   numberInSurah: number;
   text: string;
 }
 
-type SurahRoute = RouteProp<QuranStackParamList, "SurahDetail">;
+type SurahRoute = RouteProp<HomeStackParamList, "SurahDetail">;
 
 export default function SurahDetailScreen() {
   const { params } = useRoute<SurahRoute>();

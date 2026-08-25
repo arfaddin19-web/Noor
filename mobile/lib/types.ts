@@ -30,6 +30,7 @@ export interface Masjid {
   longitude: number;
   phone: string | null;
   description: string | null;
+  photo_url: string | null;
   /** Jamat (congregation) times set by this masjid — may differ from the
    *  location-wide Adhan times shown on the Prayer Times tab. */
   fajr_jamat: string | null;

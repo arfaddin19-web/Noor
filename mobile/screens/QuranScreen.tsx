@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import type { QuranStackParamList } from "../App";
+import type { HomeStackParamList } from "../App";
 
 interface Surah {
   number: number;
@@ -20,7 +20,7 @@ interface Surah {
   revelationType: string;
 }
 
-type Nav = NativeStackNavigationProp<QuranStackParamList, "QuranList">;
+type Nav = NativeStackNavigationProp<HomeStackParamList, "QuranList">;
 
 export default function QuranScreen() {
   const [surahs, setSurahs] = useState<Surah[]>([]);
