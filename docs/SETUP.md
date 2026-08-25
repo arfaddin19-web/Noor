@@ -13,6 +13,11 @@
    - `0004_masjid_jamat_times.sql` — adds per-masjid Jamat (congregation) time columns
    - `0005_update_default_location.sql` — corrects the seeded location to "Nepal"
      (nationwide), per your confirmation that the calendar is a national schedule
+   - `0006_grants.sql` — **important**: explicit `GRANT`s to `anon`/`authenticated`.
+     RLS policies alone aren't enough on some projects (this bit us for real — see
+     `docs/PROGRESS.md`). If a table is ever added later, give it the same treatment.
+   - `0007_masjid_city.sql` — adds `masjids.city`, used by the "pick your masjid"
+     district dropdown in the mobile app
 
    With the Supabase CLI installed and linked to your project:
    ```bash
@@ -80,8 +85,10 @@ shared (12 monthly tables, Fajr/Sunrise/Zohr/Asr/Maghrib/Isha).
   its own **Jamat** (congregation) time per prayer — often a few minutes after Adhan —
   in the new `masjids.fajr_jamat` / `dhuhr_jamat` / `asr_jamat` / `maghrib_jamat` /
   `isha_jamat` / `jumma_jamat` columns, editable per-masjid from the admin dashboard's
-  Masjids page. The mobile app's Prayer Times tab shows Adhan times; the Nearby tab
-  shows each masjid's Jamat times.
+  Masjids page, which also has a **City / District** field — fill this in for every
+  masjid, since it's what populates the mobile app's "pick your masjid" district
+  dropdown. The mobile app's Home tab shows Adhan times (plus a masjid's Jamat time
+  once the user picks one); the Nearby tab and Masjid Detail screen show full times.
 - **Year-agnostic storage**: times are stored by `(month, day)`, not a specific year,
   since the same printed national calendar is normally reused every year with only
   sub-minute drift. February had 29 rows in the source (a leap year), so Feb 29 is

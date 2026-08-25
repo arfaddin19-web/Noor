@@ -45,6 +45,7 @@ export interface Masjid {
   id: string;
   name: string;
   address: string | null;
+  city: string | null;
   latitude: number;
   longitude: number;
   phone: string | null;

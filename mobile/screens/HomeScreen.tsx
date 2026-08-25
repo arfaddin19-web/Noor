@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   RefreshControl,
@@ -9,13 +9,14 @@ import {
   View,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { HomeStackParamList } from "../App";
 import { supabase } from "../lib/supabase";
 import { PrayerTime, Location, Masjid } from "../lib/types";
 import { getNextPrayer, todayMonthDay } from "../lib/prayerLogic";
 import { formatHijri } from "../lib/hijri";
+import { getHomeCity, getHomeMasjidId } from "../lib/homeMasjid";
 import { theme } from "../theme";
 
 type Nav = NativeStackNavigationProp<HomeStackParamList, "HomeMain">;
@@ -33,23 +34,34 @@ const GRID_ITEMS = [
   { key: "Account", label: "Account", emoji: "👤", color: theme.colors.tile6 },
 ] as const;
 
+const JAMAT_KEY_FOR_LABEL: Record<string, keyof Masjid> = {
+  Fajr: "fajr_jamat",
+  Dhuhr: "dhuhr_jamat",
+  Asr: "asr_jamat",
+  Maghrib: "maghrib_jamat",
+  Isha: "isha_jamat",
+};
+
 export default function HomeScreen() {
   const navigation = useNavigation<Nav>();
   const [location, setLocation] = useState<Location | null>(null);
   const [today, setToday] = useState<PrayerTime | null>(null);
   const [tomorrow, setTomorrow] = useState<PrayerTime | null>(null);
   const [masjids, setMasjids] = useState<Masjid[]>([]);
+  const [homeMasjid, setHomeMasjid] = useState<Masjid | null>(null);
+  const [selectedCity, setSelectedCity] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(new Date());
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
-    const { data: loc } = await supabase
-      .from("locations")
-      .select("*")
-      .eq("is_default", true)
-      .single();
+    const [{ data: loc }, homeCity, homeMasjidId] = await Promise.all([
+      supabase.from("locations").select("*").eq("is_default", true).single(),
+      getHomeCity(),
+      getHomeMasjidId(),
+    ]);
     setLocation((loc as Location | null) ?? null);
+    setSelectedCity(homeCity);
 
     if (loc) {
       const { month, day } = todayMonthDay();
@@ -77,24 +89,39 @@ export default function HomeScreen() {
       setTomorrow((tomorrowRes.data as PrayerTime) ?? null);
     }
 
-    const { data: nearbyMasjids } = await supabase
-      .from("masjids")
-      .select("*")
-      .eq("is_approved", true)
-      .order("created_at", { ascending: false })
-      .limit(6);
+    if (homeMasjidId) {
+      const { data } = await supabase
+        .from("masjids")
+        .select("*")
+        .eq("id", homeMasjidId)
+        .maybeSingle();
+      setHomeMasjid((data as Masjid) ?? null);
+    } else {
+      setHomeMasjid(null);
+    }
+
+    const masjidQuery = supabase.from("masjids").select("*").eq("is_approved", true).limit(6);
+    const { data: nearbyMasjids } = homeCity
+      ? await masjidQuery.eq("city", homeCity)
+      : await masjidQuery.order("created_at", { ascending: false });
     setMasjids((nearbyMasjids as Masjid[]) ?? []);
 
     setLoading(false);
-  }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load])
+  );
 
   useEffect(() => {
-    load();
     const tick = setInterval(() => setNow(new Date()), 30_000);
     return () => clearInterval(tick);
   }, []);
 
   const next = today ? getNextPrayer(today, tomorrow, now) : null;
+  const nextJamat = next && homeMasjid ? (homeMasjid[JAMAT_KEY_FOR_LABEL[next.label]] as string | null) : null;
 
   function goTo(key: (typeof GRID_ITEMS)[number]["key"]) {
     if (HOME_STACK_SCREENS.has(key)) {
@@ -119,7 +146,7 @@ export default function HomeScreen() {
           <View style={styles.locationPill}>
             <Text style={styles.pinIcon}>📍</Text>
             <Text style={styles.locationText} numberOfLines={1}>
-              {location?.name ?? "Set your location"}
+              {homeMasjid ? homeMasjid.name : (location?.name ?? "Set your location")}
             </Text>
           </View>
           <View style={styles.bellButton}>
@@ -147,7 +174,9 @@ export default function HomeScreen() {
           </View>
         ) : (
           <View style={styles.glassCard}>
-            <Text style={styles.glassLabel}>Prayer time in</Text>
+            <Text style={styles.glassLabel}>
+              {homeMasjid ? "Adhan (national) time" : "Prayer time in"}
+            </Text>
             <Text style={styles.glassLocation}>{location?.name}</Text>
             {next && (
               <View style={styles.nowRow}>
@@ -156,6 +185,15 @@ export default function HomeScreen() {
                   <Text style={styles.nowPrayerLabel}>{next.label}</Text>
                 </View>
                 <Text style={styles.nowPrayerTime}>{next.time.toTimeString().slice(0, 5)}</Text>
+              </View>
+            )}
+            {homeMasjid && (
+              <View style={styles.jamatBanner}>
+                <Text style={styles.jamatBannerText}>
+                  {nextJamat
+                    ? `Jamat at ${homeMasjid.name}: ${nextJamat}`
+                    : `${homeMasjid.name} hasn't set a Jamat time for ${next?.label ?? "this prayer"} yet`}
+                </Text>
               </View>
             )}
           </View>
@@ -174,7 +212,9 @@ export default function HomeScreen() {
       </View>
 
       <View style={styles.sectionHeaderRow}>
-        <Text style={styles.sectionHeader}>Mosques</Text>
+        <Text style={styles.sectionHeader}>
+          {selectedCity ? `Mosques in ${selectedCity}` : "Mosques"}
+        </Text>
         <TouchableOpacity onPress={() => navigation.navigate("Nearby")}>
           <Text style={styles.seeAll}>See all</Text>
         </TouchableOpacity>
@@ -255,6 +295,13 @@ const styles = StyleSheet.create({
   nowPrayerTime: { color: theme.colors.textOnDark, fontSize: 34, fontWeight: "800" },
   emptyText: { color: theme.colors.textOnDarkMuted, textAlign: "center" },
   emptyTextDark: { color: theme.colors.textMuted, paddingHorizontal: 20 },
+  jamatBanner: {
+    marginTop: 14,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.glassBorder,
+  },
+  jamatBannerText: { color: theme.colors.textOnDark, fontSize: 13, fontWeight: "600" },
   grid: {
     flexDirection: "row",
     flexWrap: "wrap",

@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Linking,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -60,11 +59,6 @@ export default function NearbyScreen() {
       setLoading(false);
     });
   }, [coords]);
-
-  function openMaps(lat: number, lng: number, label: string) {
-    const url = `https://maps.google.com/?q=${lat},${lng}(${encodeURIComponent(label)})`;
-    Linking.openURL(url);
-  }
 
   return (
     <View style={{ flex: 1 }}>
@@ -136,7 +130,7 @@ export default function NearbyScreen() {
           renderItem={({ item }) => (
             <TouchableOpacity
               style={styles.card}
-              onPress={() => openMaps(item.latitude, item.longitude, item.name)}
+              onPress={() => navigation.navigate("HalalFoodDetail", { id: item.id })}
             >
               <Text style={styles.cardTitle}>
                 {item.name} {item.halal_certified ? "✅" : ""}

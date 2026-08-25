@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -11,9 +11,63 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../lib/useAuth";
 import { useNotificationSettings } from "../lib/notifications";
+import { getHomeCity, getHomeMasjidId } from "../lib/homeMasjid";
+import { rootNavigate } from "../lib/navigationRef";
+
+function YourMasjidCard() {
+  const [loading, setLoading] = useState(true);
+  const [city, setCity] = useState<string | null>(null);
+  const [masjidName, setMasjidName] = useState<string | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      let mounted = true;
+      (async () => {
+        setLoading(true);
+        const [c, masjidId] = await Promise.all([getHomeCity(), getHomeMasjidId()]);
+        if (!mounted) return;
+        setCity(c);
+        if (masjidId) {
+          const { data } = await supabase
+            .from("masjids")
+            .select("name")
+            .eq("id", masjidId)
+            .maybeSingle();
+          if (mounted) setMasjidName((data as { name: string } | null)?.name ?? null);
+        } else {
+          setMasjidName(null);
+        }
+        setLoading(false);
+      })();
+      return () => {
+        mounted = false;
+      };
+    }, [])
+  );
+
+  return (
+    <View style={styles.card}>
+      <Text style={styles.cardTitle}>Your Masjid</Text>
+      {loading ? (
+        <ActivityIndicator style={{ marginTop: 8 }} />
+      ) : (
+        <Text style={styles.cardSubtitle}>
+          {masjidName ? `${masjidName}${city ? ` — ${city}` : ""}` : "Not set yet"}
+        </Text>
+      )}
+      <TouchableOpacity
+        onPress={() => rootNavigate("MasjidSetup", { standalone: false })}
+        style={{ marginTop: 4 }}
+      >
+        <Text style={styles.switchModeText}>{masjidName ? "Change" : "Set your masjid"}</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
 
 function AuthForm() {
   const [mode, setMode] = useState<"signIn" | "signUp">("signIn");
@@ -51,8 +105,7 @@ function AuthForm() {
           {mode === "signIn" ? "Sign in" : "Create an account"}
         </Text>
         <Text style={styles.cardSubtitle}>
-          Signing in lets you keep your "Ask" question history and, soon, save your
-          favorite masjids.
+          Signing in lets you keep your "Ask" question history saved across devices.
         </Text>
 
         {mode === "signUp" && (
@@ -161,6 +214,7 @@ export default function AccountScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
+      <YourMasjidCard />
       {session && profile ? (
         <ProfileView profile={profile} />
       ) : (

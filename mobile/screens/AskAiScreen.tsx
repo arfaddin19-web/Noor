@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import Constants from "expo-constants";
 import { supabase } from "../lib/supabase";
+import { theme } from "../theme";
 
 interface Message {
   id: string;
@@ -77,7 +78,7 @@ export default function AskAiScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1 }}
+      style={styles.flex}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={90}
     >
@@ -123,10 +124,16 @@ export default function AskAiScreen() {
 }
 
 const styles = StyleSheet.create({
-  bubble: { maxWidth: "85%", borderRadius: 14, padding: 12, marginBottom: 10 },
-  bubbleUser: { alignSelf: "flex-end", backgroundColor: "#0e8a72" },
-  bubbleAssistant: { alignSelf: "flex-start", backgroundColor: "white" },
-  bubbleText: { color: "#111827", lineHeight: 20 },
+  flex: { flex: 1, backgroundColor: theme.colors.pageBg },
+  bubble: { maxWidth: "85%", borderRadius: theme.radius.md, padding: 12, marginBottom: 10 },
+  bubbleUser: { alignSelf: "flex-end", backgroundColor: theme.colors.accent },
+  bubbleAssistant: {
+    alignSelf: "flex-start",
+    backgroundColor: "white",
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  bubbleText: { color: theme.colors.textPrimary, lineHeight: 20 },
   bubbleTextUser: { color: "white", lineHeight: 20 },
   typingRow: {
     flexDirection: "row",
@@ -135,30 +142,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 4,
   },
-  typingText: { color: "#6b7280", fontSize: 12 },
+  typingText: { color: theme.colors.textMuted, fontSize: 12 },
   inputRow: {
     flexDirection: "row",
     alignItems: "flex-end",
     padding: 12,
     gap: 8,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "#e5e7eb",
+    borderTopColor: theme.colors.border,
     backgroundColor: "white",
   },
   input: {
     flex: 1,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
-    borderRadius: 20,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.pill,
     paddingHorizontal: 16,
     paddingVertical: 10,
     maxHeight: 100,
   },
   sendButton: {
-    backgroundColor: "#0e8a72",
+    backgroundColor: theme.colors.accent,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    borderRadius: 20,
+    borderRadius: theme.radius.pill,
   },
   sendButtonText: { color: "white", fontWeight: "600" },
 });

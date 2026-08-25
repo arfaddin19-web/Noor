@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabase";
 import { Masjid } from "@/lib/types";
 
 const emptyForm = {
-  name: "", address: "", latitude: "", longitude: "", phone: "", description: "",
+  name: "", address: "", city: "", latitude: "", longitude: "", phone: "", description: "",
 };
 
 const JAMAT_FIELDS: { key: keyof Masjid; label: string }[] = [
@@ -41,6 +41,7 @@ function MasjidsManager() {
     await supabase.from("masjids").insert({
       name: form.name,
       address: form.address || null,
+      city: form.city || null,
       latitude: parseFloat(form.latitude),
       longitude: parseFloat(form.longitude),
       phone: form.phone || null,
@@ -97,6 +98,7 @@ function MasjidsManager() {
       <form onSubmit={handleSubmit} className="mb-8 grid grid-cols-2 gap-3 rounded-xl border border-gray-200 bg-white p-5 sm:grid-cols-4">
         <input required placeholder="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="col-span-2 rounded-md border border-gray-300 px-3 py-2 text-sm sm:col-span-1" />
         <input placeholder="Address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} className="col-span-2 rounded-md border border-gray-300 px-3 py-2 text-sm" />
+        <input placeholder="City / District (e.g. Kathmandu)" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} className="rounded-md border border-gray-300 px-3 py-2 text-sm" />
         <input required placeholder="Latitude" value={form.latitude} onChange={(e) => setForm({ ...form, latitude: e.target.value })} className="rounded-md border border-gray-300 px-3 py-2 text-sm" />
         <input required placeholder="Longitude" value={form.longitude} onChange={(e) => setForm({ ...form, longitude: e.target.value })} className="rounded-md border border-gray-300 px-3 py-2 text-sm" />
         <input placeholder="Phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="rounded-md border border-gray-300 px-3 py-2 text-sm" />
@@ -128,7 +130,11 @@ function MasjidsManager() {
               <tr key={item.id} className="border-t border-gray-100">
                 <td className="px-3 py-2 font-medium">
                   {item.name}
-                  {item.address && <div className="text-xs font-normal text-gray-400">{item.address}</div>}
+                  {(item.city || item.address) && (
+                    <div className="text-xs font-normal text-gray-400">
+                      {[item.city, item.address].filter(Boolean).join(" — ")}
+                    </div>
+                  )}
                 </td>
                 {JAMAT_FIELDS.map((f) => (
                   <td key={f.key} className="px-3 py-1">

@@ -7,6 +7,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { StatusBar } from "expo-status-bar";
 
 import OnboardingScreen from "./screens/OnboardingScreen";
+import MasjidSetupScreen from "./screens/MasjidSetupScreen";
 import HomeScreen from "./screens/HomeScreen";
 import QiblaScreen from "./screens/QiblaScreen";
 import QuranScreen from "./screens/QuranScreen";
@@ -14,10 +15,13 @@ import SurahDetailScreen from "./screens/SurahDetailScreen";
 import HadithScreen from "./screens/HadithScreen";
 import NearbyScreen from "./screens/NearbyScreen";
 import MasjidDetailScreen from "./screens/MasjidDetailScreen";
+import HalalFoodDetailScreen from "./screens/HalalFoodDetailScreen";
 import AskAiScreen from "./screens/AskAiScreen";
 import AccountScreen from "./screens/AccountScreen";
 import { setupAndroidNotificationChannel } from "./lib/notifications";
 import { hasSeenOnboarding, markOnboardingSeen } from "./lib/onboarding";
+import { isMasjidSetupDone } from "./lib/homeMasjid";
+import { navigationRef } from "./lib/navigationRef";
 import { theme } from "./theme";
 
 export type HomeStackParamList = {
@@ -28,6 +32,13 @@ export type HomeStackParamList = {
   Hadith: undefined;
   Nearby: undefined;
   MasjidDetail: { id: string };
+  HalalFoodDetail: { id: string };
+};
+
+export type RootStackParamList = {
+  Onboarding: undefined;
+  MasjidSetup: { standalone?: boolean } | undefined;
+  Main: undefined;
 };
 
 const HomeStack = createNativeStackNavigator<HomeStackParamList>();
@@ -49,6 +60,11 @@ function HomeStackNavigator() {
         name="MasjidDetail"
         component={MasjidDetailScreen}
         options={{ title: "Masjid" }}
+      />
+      <HomeStack.Screen
+        name="HalalFoodDetail"
+        component={HalalFoodDetailScreen}
+        options={{ title: "Halal Food" }}
       />
     </HomeStack.Navigator>
   );
@@ -87,19 +103,27 @@ function MainTabs() {
   );
 }
 
+const RootStack = createNativeStackNavigator<RootStackParamList>();
+
 export default function App() {
-  const [checkingOnboarding, setCheckingOnboarding] = useState(true);
-  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [ready, setReady] = useState(false);
+  const [initialRoute, setInitialRoute] = useState<keyof RootStackParamList>("Main");
 
   useEffect(() => {
     setupAndroidNotificationChannel();
-    hasSeenOnboarding().then((seen) => {
-      setShowOnboarding(!seen);
-      setCheckingOnboarding(false);
-    });
+    (async () => {
+      const [seenOnboarding, masjidDone] = await Promise.all([
+        hasSeenOnboarding(),
+        isMasjidSetupDone(),
+      ]);
+      if (!seenOnboarding) setInitialRoute("Onboarding");
+      else if (!masjidDone) setInitialRoute("MasjidSetup");
+      else setInitialRoute("Main");
+      setReady(true);
+    })();
   }, []);
 
-  if (checkingOnboarding) {
+  if (!ready) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
         <ActivityIndicator />
@@ -107,21 +131,36 @@ export default function App() {
     );
   }
 
-  if (showOnboarding) {
-    return (
-      <OnboardingScreen
-        onDone={() => {
-          markOnboardingSeen();
-          setShowOnboarding(false);
-        }}
-      />
-    );
-  }
-
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       <StatusBar style="auto" />
-      <MainTabs />
+      <RootStack.Navigator
+        initialRouteName={initialRoute}
+        screenOptions={{ headerShown: false }}
+      >
+        <RootStack.Screen name="Onboarding">
+          {({ navigation }) => (
+            <OnboardingScreen
+              onDone={() => {
+                markOnboardingSeen();
+                navigation.replace("MasjidSetup", { standalone: true });
+              }}
+            />
+          )}
+        </RootStack.Screen>
+        <RootStack.Screen
+          name="MasjidSetup"
+          component={MasjidSetupScreen}
+          initialParams={{ standalone: true }}
+          options={{
+            headerShown: true,
+            headerTransparent: true,
+            headerTintColor: theme.colors.textOnDark,
+            title: "",
+          }}
+        />
+        <RootStack.Screen name="Main" component={MainTabs} />
+      </RootStack.Navigator>
     </NavigationContainer>
   );
 }

@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Animated, StyleSheet, Text, View } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import * as Location from "expo-location";
 import { Magnetometer } from "expo-sensors";
+import { theme } from "../theme";
 
 // Kaaba coordinates
 const KAABA_LAT = 21.4225;
@@ -113,17 +115,17 @@ export default function QiblaScreen() {
 
   if (errorMsg) {
     return (
-      <View style={styles.center}>
+      <LinearGradient colors={[theme.colors.skyTop, theme.colors.skyMid, theme.colors.skyBottom]} style={styles.center}>
         <Text style={styles.muted}>{errorMsg}</Text>
-      </View>
+      </LinearGradient>
     );
   }
 
   if (qiblaBearing === null) {
     return (
-      <View style={styles.center}>
+      <LinearGradient colors={[theme.colors.skyTop, theme.colors.skyMid, theme.colors.skyBottom]} style={styles.center}>
         <Text style={styles.muted}>Finding your location…</Text>
-      </View>
+      </LinearGradient>
     );
   }
 
@@ -135,7 +137,7 @@ export default function QiblaScreen() {
   const isAligned = Math.abs(angleDiff(heading, qiblaBearing)) < ALIGN_TOLERANCE_DEG;
 
   return (
-    <View style={styles.center}>
+    <LinearGradient colors={[theme.colors.skyTop, theme.colors.skyMid, theme.colors.skyBottom]} style={styles.center}>
       <Text style={styles.title}>
         {isAligned
           ? "You're facing the Qibla"
@@ -159,7 +161,9 @@ export default function QiblaScreen() {
             <Text style={styles.cardinalText}>W</Text>
           </CompassMark>
           <CompassMark bearing={qiblaBearing} radius={KAABA_RADIUS}>
-            <Text style={styles.kaabaIcon}>🕋</Text>
+            <View style={styles.kaabaWrap}>
+              <Text style={styles.kaabaIcon}>🕋</Text>
+            </View>
           </CompassMark>
         </Animated.View>
 
@@ -173,17 +177,17 @@ export default function QiblaScreen() {
         {isAligned ? "🕋 Aligned!" : `Qibla is ${Math.round(qiblaBearing)}° from true north`}
       </Text>
       <Text style={styles.hint}>
-        Hold your phone flat, like a compass. The red marker at the top is the direction
-        you're currently facing — turn your body until the 🕋 icon meets it.
+        Hold your phone flat, like a compass. The marker at the top is the direction you're
+        currently facing — turn your body until the 🕋 icon meets it.
       </Text>
-    </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24, gap: 16 },
-  muted: { color: "#6b7280", textAlign: "center" },
-  title: { fontSize: 16, fontWeight: "600", color: "#111827", textAlign: "center" },
+  muted: { color: theme.colors.textOnDarkMuted, textAlign: "center" },
+  title: { fontSize: 16, fontWeight: "600", color: theme.colors.textOnDark, textAlign: "center" },
   compassWrap: {
     width: RING_SIZE,
     height: RING_SIZE,
@@ -196,13 +200,21 @@ const styles = StyleSheet.create({
     width: RING_SIZE,
     height: RING_SIZE,
     borderRadius: RING_SIZE / 2,
-    borderWidth: 3,
-    borderColor: "#d1d5db",
-    backgroundColor: "white",
+    borderWidth: 1,
+    borderColor: theme.colors.glassBorder,
+    backgroundColor: theme.colors.glass,
   },
-  cardinalTextMajor: { fontSize: 16, fontWeight: "800", color: "#111827" },
-  cardinalText: { fontSize: 14, fontWeight: "600", color: "#9ca3af" },
-  kaabaIcon: { fontSize: 30 },
+  cardinalTextMajor: { fontSize: 16, fontWeight: "800", color: theme.colors.textOnDark },
+  cardinalText: { fontSize: 14, fontWeight: "600", color: theme.colors.textOnDarkMuted },
+  kaabaWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.colors.gold,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  kaabaIcon: { fontSize: 20 },
   fixedPointer: {
     position: "absolute",
     top: -8,
@@ -213,17 +225,17 @@ const styles = StyleSheet.create({
     borderTopWidth: 15,
     borderLeftColor: "transparent",
     borderRightColor: "transparent",
-    borderTopColor: "#dc2626",
+    borderTopColor: "#e35d5d",
   },
-  fixedPointerAligned: { borderTopColor: "#0e8a72" },
+  fixedPointerAligned: { borderTopColor: theme.colors.accent },
   centerDot: {
     position: "absolute",
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: "#0e8a72",
+    backgroundColor: theme.colors.gold,
   },
-  bearingText: { fontSize: 18, fontWeight: "600", color: "#374151" },
-  bearingTextAligned: { color: "#0e8a72" },
-  hint: { color: "#6b7280", textAlign: "center", paddingHorizontal: 24 },
+  bearingText: { fontSize: 18, fontWeight: "600", color: theme.colors.textOnDark },
+  bearingTextAligned: { color: theme.colors.accent },
+  hint: { color: theme.colors.textOnDarkMuted, textAlign: "center", paddingHorizontal: 24 },
 });

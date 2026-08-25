@@ -26,6 +26,7 @@ export interface Masjid {
   id: string;
   name: string;
   address: string | null;
+  city: string | null;
   latitude: number;
   longitude: number;
   phone: string | null;
@@ -60,6 +61,7 @@ export interface HalalFoodPlace {
   phone: string | null;
   halal_certified: boolean;
   description: string | null;
+  photo_url: string | null;
 }
 
 export const PRAYER_LABELS: { key: keyof PrayerTime; label: string }[] = [
