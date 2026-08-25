@@ -7,6 +7,11 @@ import { Magnetometer } from "expo-sensors";
 const KAABA_LAT = 21.4225;
 const KAABA_LNG = 39.8262;
 
+const RING_SIZE = 260;
+const MARK_RADIUS = 108;
+const KAABA_RADIUS = 82;
+const ALIGN_TOLERANCE_DEG = 6;
+
 function toRad(deg: number) {
   return (deg * Math.PI) / 180;
 }
@@ -24,6 +29,11 @@ function bearingTo(lat1: number, lng1: number, lat2: number, lng2: number): numb
   return (toDeg(Math.atan2(y, x)) + 360) % 360;
 }
 
+/** Smallest signed difference (in degrees, -180..180) from `a` to `b`. */
+function angleDiff(a: number, b: number): number {
+  return ((b - a + 540) % 360) - 180;
+}
+
 function useMagnetometerHeading() {
   const [heading, setHeading] = useState(0);
 
@@ -38,6 +48,32 @@ function useMagnetometerHeading() {
   }, []);
 
   return heading;
+}
+
+/** Places `children` at a fixed compass bearing + radius from the center of its parent,
+ *  keeping the content itself upright. Meant to sit inside a rotating dial. */
+function CompassMark({
+  bearing,
+  radius,
+  children,
+}: {
+  bearing: number;
+  radius: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <View
+      style={[
+        StyleSheet.absoluteFill,
+        { alignItems: "center" },
+        { transform: [{ rotate: `${bearing}deg` }] },
+      ]}
+    >
+      <View style={{ transform: [{ translateY: -radius }, { rotate: `${-bearing}deg` }] }}>
+        {children}
+      </View>
+    </View>
+  );
 }
 
 export default function QiblaScreen() {
@@ -65,14 +101,15 @@ export default function QiblaScreen() {
   }, []);
 
   useEffect(() => {
-    if (qiblaBearing === null) return;
-    const target = (qiblaBearing - heading + 360) % 360;
+    // Rotate the whole dial opposite to the device heading, like a real compass —
+    // North (and every other mark on the dial) then points the true direction.
+    const target = (-heading + 360) % 360;
     Animated.timing(rotation, {
       toValue: target,
       duration: 150,
       useNativeDriver: true,
     }).start();
-  }, [heading, qiblaBearing]);
+  }, [heading]);
 
   if (errorMsg) {
     return (
@@ -90,23 +127,54 @@ export default function QiblaScreen() {
     );
   }
 
-  const spin = rotation.interpolate({
+  const dialSpin = rotation.interpolate({
     inputRange: [0, 360],
     outputRange: ["0deg", "360deg"],
   });
 
+  const isAligned = Math.abs(angleDiff(heading, qiblaBearing)) < ALIGN_TOLERANCE_DEG;
+
   return (
     <View style={styles.center}>
-      <Text style={styles.title}>Face this direction for the Qibla</Text>
+      <Text style={styles.title}>
+        {isAligned
+          ? "You're facing the Qibla"
+          : "Turn until the 🕋 lines up with the marker above it"}
+      </Text>
+
       <View style={styles.compassWrap}>
-        <Animated.View style={[styles.needle, { transform: [{ rotate: spin }] }]}>
-          <Text style={styles.needleArrow}>🕋</Text>
-        </Animated.View>
         <View style={styles.compassRing} />
+
+        <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ rotate: dialSpin }] }]}>
+          <CompassMark bearing={0} radius={MARK_RADIUS}>
+            <Text style={styles.cardinalTextMajor}>N</Text>
+          </CompassMark>
+          <CompassMark bearing={90} radius={MARK_RADIUS}>
+            <Text style={styles.cardinalText}>E</Text>
+          </CompassMark>
+          <CompassMark bearing={180} radius={MARK_RADIUS}>
+            <Text style={styles.cardinalText}>S</Text>
+          </CompassMark>
+          <CompassMark bearing={270} radius={MARK_RADIUS}>
+            <Text style={styles.cardinalText}>W</Text>
+          </CompassMark>
+          <CompassMark bearing={qiblaBearing} radius={KAABA_RADIUS}>
+            <Text style={styles.kaabaIcon}>🕋</Text>
+          </CompassMark>
+        </Animated.View>
+
+        {/* Fixed marker for "straight ahead" (where your phone is pointing) — this
+            never rotates. When the 🕋 above lines up with it, you're facing Qibla. */}
+        <View style={[styles.fixedPointer, isAligned && styles.fixedPointerAligned]} />
+        <View style={styles.centerDot} />
       </View>
-      <Text style={styles.bearingText}>{Math.round(qiblaBearing)}° from true north</Text>
+
+      <Text style={[styles.bearingText, isAligned && styles.bearingTextAligned]}>
+        {isAligned ? "🕋 Aligned!" : `Qibla is ${Math.round(qiblaBearing)}° from true north`}
+      </Text>
       <Text style={styles.hint}>
-        Hold your phone flat. The Kaaba icon points toward Makkah as you turn.
+        Hold your phone flat, like a compass. The red marker at the top is the direction
+        you're currently facing — turn your body until the 🕋 icon meets it.
       </Text>
     </View>
   );
@@ -115,23 +183,47 @@ export default function QiblaScreen() {
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24, gap: 16 },
   muted: { color: "#6b7280", textAlign: "center" },
-  title: { fontSize: 16, fontWeight: "600", color: "#111827", marginBottom: 8 },
+  title: { fontSize: 16, fontWeight: "600", color: "#111827", textAlign: "center" },
   compassWrap: {
-    width: 240,
-    height: 240,
+    width: RING_SIZE,
+    height: RING_SIZE,
     alignItems: "center",
     justifyContent: "center",
+    marginTop: 8,
   },
   compassRing: {
     position: "absolute",
-    width: 240,
-    height: 240,
-    borderRadius: 120,
-    borderWidth: 4,
-    borderColor: "#0e8a72",
+    width: RING_SIZE,
+    height: RING_SIZE,
+    borderRadius: RING_SIZE / 2,
+    borderWidth: 3,
+    borderColor: "#d1d5db",
+    backgroundColor: "white",
   },
-  needle: { alignItems: "center", justifyContent: "flex-start", height: 240 },
-  needleArrow: { fontSize: 40, marginTop: 8 },
-  bearingText: { marginTop: 16, fontSize: 18, fontWeight: "600", color: "#0e8a72" },
-  hint: { marginTop: 8, color: "#6b7280", textAlign: "center", paddingHorizontal: 24 },
+  cardinalTextMajor: { fontSize: 16, fontWeight: "800", color: "#111827" },
+  cardinalText: { fontSize: 14, fontWeight: "600", color: "#9ca3af" },
+  kaabaIcon: { fontSize: 30 },
+  fixedPointer: {
+    position: "absolute",
+    top: -8,
+    width: 0,
+    height: 0,
+    borderLeftWidth: 9,
+    borderRightWidth: 9,
+    borderTopWidth: 15,
+    borderLeftColor: "transparent",
+    borderRightColor: "transparent",
+    borderTopColor: "#dc2626",
+  },
+  fixedPointerAligned: { borderTopColor: "#0e8a72" },
+  centerDot: {
+    position: "absolute",
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#0e8a72",
+  },
+  bearingText: { fontSize: 18, fontWeight: "600", color: "#374151" },
+  bearingTextAligned: { color: "#0e8a72" },
+  hint: { color: "#6b7280", textAlign: "center", paddingHorizontal: 24 },
 });
