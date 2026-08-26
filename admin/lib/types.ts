@@ -104,6 +104,18 @@ export interface DonationInfo {
   khalti_id: string;
 }
 
+export interface CommunityOrg {
+  id: string;
+  name: string;
+  city: string | null;
+  contact_person: string | null;
+  designation: string | null;
+  phone: string | null;
+  description: string | null;
+  is_approved: boolean;
+  created_at: string;
+}
+
 export const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",

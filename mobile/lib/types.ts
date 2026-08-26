@@ -64,6 +64,16 @@ export interface HalalFoodPlace {
   photo_url: string | null;
 }
 
+export interface CommunityOrg {
+  id: string;
+  name: string;
+  city: string | null;
+  contact_person: string | null;
+  designation: string | null;
+  phone: string | null;
+  description: string | null;
+}
+
 export const PRAYER_LABELS: { key: keyof PrayerTime; label: string }[] = [
   { key: "fajr", label: "Fajr" },
   { key: "sunrise", label: "Sunrise" },

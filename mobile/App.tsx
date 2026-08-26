@@ -21,6 +21,8 @@ import HadithBookScreen from "./screens/HadithBookScreen";
 import TasbihScreen from "./screens/TasbihScreen";
 import DuaScreen from "./screens/DuaScreen";
 import DonateScreen from "./screens/DonateScreen";
+import IslamicCalendarScreen from "./screens/IslamicCalendarScreen";
+import CommunityHelpScreen from "./screens/CommunityHelpScreen";
 import SettingsScreen from "./screens/SettingsScreen";
 import MasjidsScreen from "./screens/MasjidsScreen";
 import HalalFoodScreen from "./screens/HalalFoodScreen";
@@ -48,6 +50,8 @@ export type HomeStackParamList = {
   Tasbih: undefined;
   Dua: undefined;
   Donate: undefined;
+  IslamicCalendar: undefined;
+  CommunityHelp: undefined;
   Masjids: undefined;
   HalalFood: undefined;
   MasjidDetail: { id: string };
@@ -83,6 +87,16 @@ function HomeStackNavigator() {
       <HomeStack.Screen name="Tasbih" component={TasbihScreen} options={{ title: "Tasbih" }} />
       <HomeStack.Screen name="Dua" component={DuaScreen} options={{ title: "Dua" }} />
       <HomeStack.Screen name="Donate" component={DonateScreen} options={{ title: "Donate" }} />
+      <HomeStack.Screen
+        name="IslamicCalendar"
+        component={IslamicCalendarScreen}
+        options={{ title: "Islamic Calendar" }}
+      />
+      <HomeStack.Screen
+        name="CommunityHelp"
+        component={CommunityHelpScreen}
+        options={{ title: "Community Help" }}
+      />
       <HomeStack.Screen name="Masjids" component={MasjidsScreen} options={{ title: "Masjids" }} />
       <HomeStack.Screen name="HalalFood" component={HalalFoodScreen} options={{ title: "Halal Food" }} />
       <HomeStack.Screen

@@ -8,12 +8,13 @@ up correctly in the mobile app.
 
 ## Done
 
-- **Supabase schema** (`supabase/migrations/0001`–`0009`): profiles (role-based),
+- **Supabase schema** (`supabase/migrations/0001`–`0010`): profiles (role-based),
   locations, prayer_times (national Adhan times), masjids (Jamat times + city/district),
   halal_food_places, ai_qa_history, app_settings, **notices** (admin announcements,
-  0008) — with RLS (public read, admin write) **and** explicit grants for
-  `anon`/`authenticated` (0006 — see the note below, this was the cause of a real
-  "permission denied" bug). `0009_fix_pm_times.sql` corrects a real data bug — see below.
+  0008), **community_orgs** (masjid-affiliated social-work contacts, 0010) — with RLS
+  (public read, admin write) **and** explicit grants for `anon`/`authenticated` (0006 —
+  see the note below, this was the cause of a real "permission denied" bug).
+  `0009_fix_pm_times.sql` corrects a real data bug — see below.
 - **Prayer time data**: transcribed from the IQRA Tutorial Hub calendar PDF, seeded as
   a single nationwide **Nepal** location (366 rows = 365 days + Feb 29).
 - **Adhan vs. Jamat**: `prayer_times` holds the national Adhan (start) times; each
@@ -24,15 +25,15 @@ up correctly in the mobile app.
   from Account → "Your Masjid", the user picks a district/city then a masjid from that
   city (from real data — the dropdown is populated from `masjids.city`). Once set,
   Home's hero card shows that masjid by name and adds its Jamat time for the next
-  prayer; the "Mosques" row filters to that city too. Stored on-device (AsyncStorage),
-  skippable, changeable anytime — falls back to the generic nationwide Adhan display
-  when unset.
+  prayer. Stored on-device (AsyncStorage), skippable, changeable anytime — falls back
+  to the generic nationwide Adhan display when unset.
 - **Admin dashboard** (Next.js 16 / React 19, `/admin`): email/password login gated to
   admins, overview stats, prayer times (Adhan) editor, masjids CRUD (incl. city) with
   approve/reject and inline Jamat time editing, halal food CRUD with approve/reject,
-  **Notices** (publish/hide short announcements shown on the app's Home screen),
-  **Donation** (edit the bank/eSewa/Khalti details shown on the app's Donate screen), AI
-  Q&A log viewer with flagging. `npm run build` verified clean.
+  **Community Help** (masjid-affiliated social-work orgs: name, city, contact person,
+  designation, phone), **Notices** (publish/hide short announcements shown on the app's
+  Home screen), **Donation** (edit the bank/eSewa/Khalti details shown on the app's
+  Donate screen), AI Q&A log viewer with flagging. `npm run build` verified clean.
 - **Mobile app** (Expo SDK 54 / React Native 0.81, `/mobile`) — redesigned to match
   user-supplied reference mockups. Theming and iconography had a full pass:
   - **Theme**: `theme.ts` now exports `getTheme(mode)` with a **dark** palette (deep
@@ -53,9 +54,11 @@ up correctly in the mobile app.
     Below that, a real **Today's Progress** card — a tappable 5-prayer checklist (stored
     per-day on-device, and a prayer can't be ticked before its own Adhan time has
     actually arrived) with a completion bar, plus an honest "Qur'an opened N× today"
-    count. Then a bigger 3-column icon grid: Qibla, Qur'an, Books & Hadith, Tasbih,
-    Masjids, Halal Food, Dua, Donate, Ask AI, Account (Settings moved to its own bottom
-    tab — see Navigation below). An **Ayah of the Day** card closes out the screen —
+    count. The Current-prayer name and its "until…" time were sized up so they don't
+    read as an afterthought next to the (larger) Next-prayer name/time. Then a bigger
+    3-column icon grid: Qibla, Qur'an, Books & Hadith, Tasbih, Masjids, Halal Food, Dua,
+    Donate, Islamic Calendar, Community Help, Ask AI, Account (Settings moved to its own
+    bottom tab — see Navigation below). An **Ayah of the Day** card closes out the screen —
     deterministic by day-of-year from a curated list of ~25 standalone-meaningful verses
     (so it never lands on an ayah that only makes sense mid-passage), fetched live and
     tappable into that Surah. The whole screen (and most secondary screens) sits on a
@@ -108,6 +111,18 @@ up correctly in the mobile app.
   - **Donate**: shows a support message plus whichever of bank/account/eSewa/Khalti
     details the admin has filled in (`app_settings.donation_info`); values are
     press-and-hold to copy. Hides rows the admin left blank.
+  - **Islamic Calendar** (new): two tabs. **Events** lists Islamic New Year, Ashura,
+    Mawlid, Isra & Mi'raj, start of Ramadan, Laylatul Qadr, Eid al-Fitr, start of Dhu
+    al-Hijjah, Day of Arafah, and Eid al-Adha for the current Hijri year, each with an
+    "in N days" badge, computed entirely offline. **Ramadan** shows a real Sehri-ends /
+    Iftar table for every day of the current or next Ramadan, sourced from the actual
+    `prayer_times` data (Fajr/Maghrib) rather than separate content. Both tabs carry a
+    visible caveat that these are tabular-calendar estimates — actual Ramadan/Eid dates
+    depend on local moon sighting and can shift by a day.
+  - **Community Help** (new, the user's "Volunteers" idea, renamed): a directory of
+    masjid-affiliated social-work organizations — name, city, contact person,
+    designation, phone — with a city search bar, for someone new to a city or in
+    difficulty to reach out directly. Tap a phone number to call.
   - **Settings**: now its own **bottom tab** (Home / Ask / Settings / Account) rather than
     a Home grid tile — prayer notification toggle, **Adhan sound on/off** (silent banner
     vs. a sound — honestly scoped to what Expo Go/local notifications can actually do, no
@@ -125,9 +140,10 @@ up correctly in the mobile app.
   - **Account**: "Your Masjid" picker, Supabase email/password sign up & sign in,
     profile, sign out.
   - Navigation is now **4 bottom tabs — Home / Ask / Settings / Account** — with
-    everything else (Qibla, Qur'an, Books & Hadith, Tasbih, Dua, Donate, Masjids, Halal
-    Food) reached via Home's icon grid/stack. Every secondary screen's header now uses
-    the same deep-emerald gradient as the Home hero, instead of a flat bar.
+    everything else (Qibla, Qur'an, Books & Hadith, Tasbih, Dua, Donate, Islamic
+    Calendar, Community Help, Masjids, Halal Food) reached via Home's icon grid/stack.
+    Every secondary screen's header now uses the same deep-emerald gradient as the Home
+    hero, instead of a flat bar.
 - **Push notifications**: `mobile/lib/notifications.ts` schedules a local notification
   for each remaining Adhan over the next 7 days, toggled from Account; re-schedules
   cleanly on every toggle so nothing piles up.
@@ -172,7 +188,10 @@ Worth keeping in mind if something looks broken again:
    migration (`0009_fix_pm_times.sql`) adding 12 hours to those three columns —
    confirmed via a full-table audit that no row already had a value ≥ 12 there, so the
    fix is safe to apply uniformly. **Must be run in Supabase SQL Editor for existing
-   projects** — it's a data fix, not something `npm install` picks up.
+   projects** — it's a data fix, not something `npm install` picks up. (The first
+   version of this migration used `to_char(...)`, which returns text — but `asr`/
+   `maghrib`/`isha` are native Postgres `time` columns, so that failed with a type
+   error. Fixed to add the interval directly, no cast needed.)
 6. **Qibla needle pointing the wrong way on some devices**: the compass heading was
    computed from the raw magnetometer vector via `atan2(y, x)` with a hand-guessed
    offset — explicitly commented "device-dependent" in the original code, and it was
@@ -180,11 +199,35 @@ Worth keeping in mind if something looks broken again:
    `expo-location`'s `watchHeadingAsync`, the tilt-compensated sensor-fusion API the
    native Compass app itself uses — far more reliable, and the same convention every
    real compass app relies on.
+7. **Hijri date conversion silently off by 1-3 days, every year, near Jan 31→Feb 1 and
+   Feb 28→Mar 1**: found while building the Islamic Calendar/Ramadan Timetable feature,
+   which needed a reliable *inverse* (Hijri → Gregorian) conversion and so got fuzz-
+   tested against the existing forward conversion for the first time. The bug was in
+   `gregorianToJD()`'s `(month - 14) / 12` term: the original algorithm assumes C-style
+   truncating integer division, but the JS port used `Math.floor()`, which only
+   disagrees with truncation for negative results — i.e. only for January and February.
+   That silently shifted the calendar day (and therefore `formatHijri()`'s date shown
+   on Home) by up to 2 days during those two short windows every year. Replaced the
+   whole Gregorian⇄Hijri pair with `Math.trunc()` for that term and a verified-inverse
+   Julian-day-based implementation — checked against 25 years of consecutive daily
+   dates (zero non-monotonic jumps) and 20 years of round-trip conversions (zero
+   mismatches), plus two independently-known reference dates (1 Muharram 1445 AH = 19
+   July 2023; 1 Ramadan 1446 AH = 1 March 2025).
 
 ## Not yet done / next steps
 
 - User needs to add billing credits on console.anthropic.com for Ask AI to actually
   respond (see above — everything on our side is confirmed working).
+- **Sign-up is email/password only** — no Google or other social sign-in is wired up.
+  New accounts require clicking a confirmation link Supabase emails via its own
+  built-in (very rate-limited, sometimes-unreliable) sender; if that email never
+  arrives, the fix is in the Supabase Dashboard, not the code — see the reply this was
+  raised in for exact steps (turn off "Confirm email," or configure custom SMTP).
+  Google Sign-In could be added later if wanted (needs a Google Cloud OAuth client +
+  Supabase provider config + deep-link handling in Expo).
+- Ramadan Timetable / Islamic Calendar dates are computed from a standard tabular
+  Hijri calendar, not moon sighting — every screen using them says so, but they should
+  still be treated as estimates, not an authoritative Ramadan/Eid announcement.
 - Qur'an audio recitation ("Play"/"Auto-scroll") is not built — would need a reciter
   audio source wired up (AlQuran Cloud does offer per-ayah audio editions) plus an
   audio player; worth adding later if the user wants it, but not faked in the meantime.

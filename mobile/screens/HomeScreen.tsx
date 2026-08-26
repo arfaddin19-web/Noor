@@ -50,6 +50,8 @@ const HOME_STACK_SCREENS = new Set([
   "Tasbih",
   "Dua",
   "Donate",
+  "IslamicCalendar",
+  "CommunityHelp",
   "Masjids",
   "HalalFood",
 ]);
@@ -70,6 +72,8 @@ const GRID_ITEMS: GridItem[] = [
   { key: "HalalFood", label: "Halal Food", set: "ion", icon: "restaurant-outline" },
   { key: "Dua", label: "Dua", set: "mci", icon: "hands-pray" },
   { key: "Donate", label: "Donate", set: "ion", icon: "heart-outline" },
+  { key: "IslamicCalendar", label: "Islamic Calendar", set: "ion", icon: "calendar-outline" },
+  { key: "CommunityHelp", label: "Community Help", set: "mci", icon: "hand-heart" },
   { key: "Ask", label: "Ask AI", set: "ion", icon: "chatbubble-ellipses-outline" },
   { key: "Account", label: "Account", set: "ion", icon: "person-outline" },
 ];
@@ -453,8 +457,8 @@ function makeStyles(theme: Theme) {
     prayerCols: { flexDirection: "row", alignItems: "center" },
     prayerCol: { flex: 1 },
     colDivider: { width: 1, height: 52, backgroundColor: theme.colors.glassBorder, marginHorizontal: 16 },
-    currentPrayerLabel: { color: theme.colors.textOnDark, fontSize: 22, fontWeight: "800", marginTop: 4 },
-    endsAtText: { color: theme.colors.textOnDarkMuted, fontSize: 11, marginTop: 3, fontWeight: "600" },
+    currentPrayerLabel: { color: theme.colors.textOnDark, fontSize: 26, fontWeight: "800", marginTop: 4 },
+    endsAtText: { color: theme.colors.textOnDarkMuted, fontSize: 14, marginTop: 4, fontWeight: "700" },
     emptyText: { color: theme.colors.textOnDarkMuted, textAlign: "center" },
     nowPrayerLabel: { color: theme.colors.gold, fontSize: 18, fontWeight: "700", marginTop: 4 },
     nowPrayerTime: { color: theme.colors.textOnDark, fontSize: 26, fontWeight: "800", marginTop: 2 },

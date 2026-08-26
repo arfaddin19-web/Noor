@@ -10,6 +10,7 @@ const NAV = [
   { href: "/prayer-times", label: "Prayer Times" },
   { href: "/masjids", label: "Masjids" },
   { href: "/halal-food", label: "Halal Food" },
+  { href: "/community-help", label: "Community Help" },
   { href: "/notices", label: "Notices" },
   { href: "/donation", label: "Donation" },
   { href: "/ai-qa", label: "AI Q&A Log" },
