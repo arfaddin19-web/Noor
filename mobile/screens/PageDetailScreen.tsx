@@ -8,40 +8,41 @@ import TranslationToggleBar from "../components/TranslationToggleBar";
 import { saveLastRead } from "../lib/quranProgress";
 import { theme } from "../theme";
 
-interface JuzAyah {
+interface PageAyah {
   numberInSurah: number;
   text: string;
   surah?: { number: number; englishName: string; name: string };
 }
 
-type JuzRoute = RouteProp<HomeStackParamList, "JuzDetail">;
+type PageRoute = RouteProp<HomeStackParamList, "PageDetail">;
 
-export default function JuzDetailScreen() {
-  const { params } = useRoute<JuzRoute>();
-  const [arabic, setArabic] = useState<JuzAyah[]>([]);
-  const [translation, setTranslation] = useState<JuzAyah[]>([]);
+export default function PageDetailScreen() {
+  const { params } = useRoute<PageRoute>();
+  const [arabic, setArabic] = useState<PageAyah[]>([]);
+  const [translation, setTranslation] = useState<PageAyah[]>([]);
   const [showTranslation, setShowTranslation] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    saveLastRead({ type: "juz", number: params.number, label: `Juz ${params.number}` });
+    saveLastRead({ type: "page", number: params.number, label: `Page ${params.number}` });
 
     Promise.all([
-      fetch(`https://api.alquran.cloud/v1/juz/${params.number}/quran-uthmani`).then((r) =>
+      fetch(`https://api.alquran.cloud/v1/page/${params.number}/quran-uthmani`).then((r) =>
         r.json()
       ),
-      fetch(`https://api.alquran.cloud/v1/juz/${params.number}/en.sahih`).then((r) => r.json()),
+      fetch(`https://api.alquran.cloud/v1/page/${params.number}/en.sahih`).then((r) =>
+        r.json()
+      ),
     ])
       .then(([ar, en]) => {
         setArabic(ar.data.ayahs);
         setTranslation(en.data.ayahs);
       })
-      .catch(() => setError("Couldn't load this Juz. Check your connection."))
+      .catch(() => setError("Couldn't load this page. Check your connection."))
       .finally(() => setLoading(false));
   }, [params.number]);
 
-  // Mark the first ayah of each surah within this Juz, so we can show a header row.
   const rows = useMemo(
     () =>
       arabic.map((ayah, index) => ({

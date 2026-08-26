@@ -27,6 +27,29 @@ export interface NextPrayer {
   msRemaining: number;
 }
 
+export interface CurrentPrayer {
+  label: string;
+  time: Date;
+}
+
+/**
+ * The salah whose window we're currently in — i.e. the most recent prayer time
+ * that has already passed today. Returns null before today's Fajr (in which case
+ * the current window technically belongs to last night's Isha, which we don't
+ * have loaded here — callers should show a neutral placeholder in that case).
+ */
+export function getCurrentPrayer(today: PrayerTime, now = new Date()): CurrentPrayer | null {
+  const salahKeys = PRAYER_LABELS.filter((p) => p.key !== "sunrise");
+  let current: CurrentPrayer | null = null;
+  for (const { key, label } of salahKeys) {
+    const t = parseTimeToday(today[key] as string, now);
+    if (t.getTime() <= now.getTime()) {
+      current = { label, time: t };
+    }
+  }
+  return current;
+}
+
 /**
  * Given today's row and tomorrow's row (for the after-Isha case), find the next
  * upcoming prayer (Fajr, Dhuhr, Asr, Maghrib, or Isha — sunrise is informational only).

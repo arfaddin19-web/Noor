@@ -31,32 +31,46 @@ up correctly in the mobile app.
   approve/reject and inline Jamat time editing, halal food CRUD with approve/reject, AI
   Q&A log viewer with flagging. `npm run build` verified clean.
 - **Mobile app** (Expo SDK 54 / React Native 0.81, `/mobile`) — redesigned to match
-  user-supplied reference mockups:
+  user-supplied reference mockups, most recently rethemed to a deep-emerald palette
+  (`theme.ts`) matching the second batch of reference images:
   - **Onboarding**: 3-slide intro (dark sky gradient + a dependency-free View-based
     mosque skyline), shown once, then the masjid picker above.
-  - **Home**: frosted-glass prayer hero card (location/masjid, Gregorian + approximate
-    Hijri date, next-prayer countdown, Jamat line when a masjid is set), a 2×3 icon
-    grid (Qibla, Qur'an, Hadith, Halal Food, Ask, Account), and a "Mosques" card row.
-  - **Qibla**: two-point alignment compass — a fixed marker at the top of the ring
-    (your phone's facing direction) and a rotating dial with N/E/S/W + a 🕋 mark at the
-    Qibla bearing; both turn green and align when you're facing the right way.
+  - **Home**: emerald gradient hero with a personalized greeting ("Assalamu alaikum,
+    {first name}" when signed in), a gold mosque-skyline silhouette, and a frosted-glass
+    Current/Next prayer card (current = the salah window we're in right now, computed
+    from today's Adhan times; Jamat line when a masjid is set). Below it, a real
+    **Today's Progress** card — a tappable 5-prayer checklist (stored per-day on-device)
+    with a completion bar, plus an honest "Qur'an opened N× today" count (no fabricated
+    percentages). Then a 4-column icon grid (Qibla, Qur'an, Hadith, Tasbih, Nearby, Ask,
+    Account) and a "Mosques" card row.
+  - **Qibla**: rebuilt to match the detailed reference — a 300px ring with 10° tick
+    marks (major at cardinals, minor elsewhere), gold N/NE/E/SE/S/SW/W/NW labels, and a
+    rotating two-tone needle (grey tail + red tip topped with a 🕋) nested inside a
+    rotating dial so the needle's on-screen angle always equals `qiblaBearing - heading`.
+    Center hub and status text turn green with "You're facing Kaaba now" when aligned.
+    (Intentionally skipped: the reference's live map thumbnail and compass-skin picker
+    row — decorative/heavy, not core functionality.)
+  - **Qur'an**: rebuilt list screen with a "Last Read" hero card (jumps back into
+    whichever Surah/Juz/Page you last opened), a Sura/Page/Juz underline-tab toggle,
+    8-point star badges on Surah/Juz rows, and a 604-tile Page grid (each page fetched
+    via AlQuran Cloud's `/v1/page/{n}/{edition}`, grouped with surah-name headers).
+    Surah/Juz/Page readers all record "last read" + a daily open-count, and share a
+    "Show translation" switch instead of always displaying it.
+  - **Tasbih**: a new tap-to-count dhikr counter — circular dial with a fill-progress
+    ring, target chips (33/99/100), vibration + auto-reset + rounds-completed counter
+    when the target is hit, persisted on-device.
   - **Masjid Detail** / **Halal Food Detail**: hero image (placeholder if none set),
     address/phone, and for masjids a Prayer/Azan/Iqama table; a Directions button opens
     Maps. Reached from Home's mosque cards, Nearby's list, and the masjid picker.
   - **Nearby**: masjids/halal food sorted by GPS distance; masjid rows now open Masjid
     Detail instead of jumping straight to Maps.
-  - **Qur'an**: Surah/Para (Juz) toggle on the list screen — Juz mode fetches a
-    para's ayahs (spanning multiple surahs) via AlQuran Cloud's `/v1/juz/{n}/{edition}`
-    and shows a surah-name header wherever the surah changes within that Juz. Both
-    readers (Surah and Juz) have a "Show translation" switch instead of always
-    displaying it.
   - **Ask**: AI Q&A chat UI wired to and verified working against the deployed
     `ask-ai` Supabase Edge Function (see below).
   - **Account**: "Your Masjid" (see above), Supabase email/password sign up & sign in,
     profile, sign out, prayer notification toggle.
   - Navigation simplified to 3 bottom tabs — **Home / Ask / Account** — with Qibla,
-    Qur'an, Hadith, and Nearby reached via Home's icon grid/stack instead of 7 cramped
-    tabs.
+    Qur'an, Hadith, Tasbih, and Nearby reached via Home's icon grid/stack instead of
+    cramped top-level tabs.
   - UI polish pass: every screen now shares `theme.ts` tokens (colors/spacing/radius)
     and a common soft-elevation `cardShadow` on cards and primary buttons, replacing
     the flat/inconsistent styling most screens had right after the initial build.
@@ -99,9 +113,6 @@ Worth keeping in mind if something looks broken again:
 
 - User needs to add billing credits on console.anthropic.com for Ask AI to actually
   respond (see above — everything on our side is confirmed working).
-- **Qibla redesign** — user is sending a reference image for how they want it to look;
-  revisit once received (current version has the two-point alignment fix but not yet
-  matched to their preferred visual style).
 - Qibla compass heading math is a reasonable first pass but should be checked for
   accuracy on a real device — magnetometer calibration/tilt-compensation varies by
   phone.

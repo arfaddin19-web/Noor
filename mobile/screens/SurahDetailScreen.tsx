@@ -5,6 +5,7 @@ import { useRoute } from "@react-navigation/native";
 import type { HomeStackParamList } from "../App";
 import AyahCard from "../components/AyahCard";
 import TranslationToggleBar from "../components/TranslationToggleBar";
+import { saveLastRead } from "../lib/quranProgress";
 import { theme } from "../theme";
 
 interface Ayah {
@@ -23,6 +24,8 @@ export default function SurahDetailScreen() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    saveLastRead({ type: "surah", number: params.number, label: params.englishName });
+
     Promise.all([
       fetch(`https://api.alquran.cloud/v1/surah/${params.number}`).then((r) => r.json()),
       fetch(`https://api.alquran.cloud/v1/surah/${params.number}/en.sahih`).then((r) =>
