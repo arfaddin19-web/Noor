@@ -132,11 +132,18 @@ const lightShadow = {
   elevation: 2,
 };
 
-// Amiri — a classical Naskh revival typeface, chosen for how much more legible
-// it is for Quranic/Arabic text than the system default. Loaded via expo-font
-// in App.tsx (assets/fonts/Amiri-*.ttf, OFL-licensed). Used for every block of
-// Arabic in the app (Qur'an reader, Dua/Kalima text, Ayah of the Day).
-export const ARABIC_FONT_REGULAR = "Amiri-Regular";
+// Amiri Quran — the heavier, purpose-built cut of the Amiri family for
+// continuous Mushaf-style Quranic text (closer to the dense, bold look of a
+// printed Mushaf than the general-purpose Amiri Regular). The exact font in
+// the user's reference photo is the King Fahd Complex "Uthmanic Hafs"
+// typeface, which is non-commercial-only licensed and can't legally be
+// bundled in this app without buying a license — Amiri Quran is the closest
+// OFL-licensed (free, commercial-use-allowed) match. Loaded via expo-font in
+// App.tsx (assets/fonts/AmiriQuran-Regular.ttf + Amiri-Bold.ttf). Used for
+// every block of Arabic in the app (Qur'an reader, Dua/Kalima text, Ayah of
+// the Day). Amiri Quran has no bold cut, so ayah-marker numerals still use
+// regular Amiri Bold.
+export const ARABIC_FONT_REGULAR = "AmiriQuran-Regular";
 export const ARABIC_FONT_BOLD = "Amiri-Bold";
 
 export function getTheme(mode: "light" | "dark"): Theme {

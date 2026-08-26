@@ -193,7 +193,7 @@ function AppInner() {
   const [ready, setReady] = useState(false);
   const [initialRoute, setInitialRoute] = useState<keyof RootStackParamList>("Main");
   const [fontsLoaded] = useFonts({
-    "Amiri-Regular": require("./assets/fonts/Amiri-Regular.ttf"),
+    "AmiriQuran-Regular": require("./assets/fonts/AmiriQuran-Regular.ttf"),
     "Amiri-Bold": require("./assets/fonts/Amiri-Bold.ttf"),
   });
 
