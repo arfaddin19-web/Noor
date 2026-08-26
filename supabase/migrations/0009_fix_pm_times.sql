@@ -7,10 +7,15 @@
 -- This is what caused the app's "current/next prayer" logic to misfire in
 -- the afternoon (e.g. showing "Current: Isha, Next: Fajr" at 2:38pm) — every
 -- afternoon/evening prayer parsed as if it were in the early morning.
+--
+-- asr/maghrib/isha are native `time` columns, so no text cast/to_char is
+-- needed — Postgres just adds the interval directly (and wraps within the
+-- 24h cycle, though nothing here is close enough to midnight for that to
+-- matter).
 
 update prayer_times
 set
-  asr = to_char((asr::time + interval '12 hours'), 'HH24:MI'),
-  maghrib = to_char((maghrib::time + interval '12 hours'), 'HH24:MI'),
-  isha = to_char((isha::time + interval '12 hours'), 'HH24:MI')
+  asr = asr + interval '12 hours',
+  maghrib = maghrib + interval '12 hours',
+  isha = isha + interval '12 hours'
 where location_id = '00000000-0000-0000-0000-000000000001';
