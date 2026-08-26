@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import ScreenBackground from "../components/ScreenBackground";
 import { useNotificationSettings, useAdhanSoundSetting } from "../lib/notifications";
 import { useThemeMode } from "../lib/ThemeContext";
 import type { Theme } from "../theme";
@@ -40,6 +41,7 @@ export default function SettingsScreen() {
   const adhanSound = useAdhanSoundSetting();
 
   return (
+    <ScreenBackground>
     <ScrollView style={styles.page} contentContainerStyle={{ padding: 16 }}>
       <Text style={styles.sectionTitle}>Prayer notifications</Text>
       <View style={[styles.card, theme.cardShadow]}>
@@ -103,12 +105,13 @@ export default function SettingsScreen() {
         />
       </View>
     </ScrollView>
+    </ScreenBackground>
   );
 }
 
 function makeStyles(theme: Theme) {
   return StyleSheet.create({
-    page: { flex: 1, backgroundColor: theme.colors.pageBg },
+    page: { flex: 1, backgroundColor: "transparent" },
     sectionTitle: {
       fontSize: 12,
       fontWeight: "700",

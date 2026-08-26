@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import ScreenBackground from "../components/ScreenBackground";
 import { getDonationInfo, DonationInfo } from "../lib/donation";
 import { useTheme } from "../lib/ThemeContext";
 import type { Theme } from "../theme";
@@ -36,6 +37,7 @@ export default function DonateScreen() {
   const hasAnyDetail = info && ROWS.some((r) => info[r.key]);
 
   return (
+    <ScreenBackground>
     <ScrollView style={styles.page} contentContainerStyle={{ padding: 16 }}>
       <View style={[styles.heroCard, theme.cardShadow]}>
         <Ionicons name="heart" size={32} color={theme.colors.gold} />
@@ -72,13 +74,14 @@ export default function DonateScreen() {
         </View>
       )}
     </ScrollView>
+    </ScreenBackground>
   );
 }
 
 function makeStyles(theme: Theme) {
   return StyleSheet.create({
-    page: { flex: 1, backgroundColor: theme.colors.pageBg },
-    center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: theme.colors.pageBg },
+    page: { flex: 1, backgroundColor: "transparent" },
+    center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "transparent" },
     heroCard: {
       backgroundColor: theme.colors.cardBg,
       borderRadius: theme.radius.lg,

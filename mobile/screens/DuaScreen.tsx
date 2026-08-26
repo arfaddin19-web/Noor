@@ -1,9 +1,14 @@
 import React, { useMemo, useState } from "react";
 import { SectionList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import ScreenBackground from "../components/ScreenBackground";
 import { DUA_CATEGORIES, DuaEntry } from "../lib/duaData";
 import { useTheme } from "../lib/ThemeContext";
 import type { Theme } from "../theme";
+
+function allCollapsed(): Record<string, boolean> {
+  return Object.fromEntries(DUA_CATEGORIES.map((c) => [c.key, true]));
+}
 
 function DuaCard({ item, theme }: { item: DuaEntry; theme: Theme }) {
   const styles = useMemo(() => makeStyles(theme), [theme]);
@@ -21,11 +26,12 @@ function DuaCard({ item, theme }: { item: DuaEntry; theme: Theme }) {
 export default function DuaScreen() {
   const theme = useTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>(allCollapsed);
 
   const sections = DUA_CATEGORIES.map((c) => ({
     key: c.key,
     title: c.title,
+    count: c.items.length,
     data: collapsed[c.key] ? [] : c.items,
   }));
 
@@ -34,30 +40,34 @@ export default function DuaScreen() {
   }
 
   return (
-    <SectionList
-      style={styles.page}
-      contentContainerStyle={styles.listContent}
-      sections={sections}
-      keyExtractor={(item) => item.title}
-      renderItem={({ item }) => <DuaCard item={item} theme={theme} />}
-      renderSectionHeader={({ section }) => (
-        <TouchableOpacity style={styles.sectionHeader} onPress={() => toggle(section.key)}>
-          <Text style={styles.sectionTitle}>{section.title}</Text>
-          <Ionicons
-            name={collapsed[section.key] ? "chevron-down" : "chevron-up"}
-            size={18}
-            color={theme.colors.accent}
-          />
-        </TouchableOpacity>
-      )}
-      stickySectionHeadersEnabled={false}
-    />
+    <ScreenBackground>
+      <SectionList
+        style={styles.page}
+        contentContainerStyle={styles.listContent}
+        sections={sections}
+        keyExtractor={(item) => item.title}
+        renderItem={({ item }) => <DuaCard item={item} theme={theme} />}
+        renderSectionHeader={({ section }) => (
+          <TouchableOpacity style={styles.sectionHeader} onPress={() => toggle(section.key)}>
+            <Text style={styles.sectionTitle}>
+              {section.title} ({section.count})
+            </Text>
+            <Ionicons
+              name={collapsed[section.key] ? "chevron-down" : "chevron-up"}
+              size={18}
+              color={theme.colors.accent}
+            />
+          </TouchableOpacity>
+        )}
+        stickySectionHeadersEnabled={false}
+      />
+    </ScreenBackground>
   );
 }
 
 function makeStyles(theme: Theme) {
   return StyleSheet.create({
-    page: { flex: 1, backgroundColor: theme.colors.pageBg },
+    page: { flex: 1, backgroundColor: "transparent" },
     listContent: { padding: theme.spacing.md, paddingBottom: 40 },
     sectionHeader: {
       flexDirection: "row",

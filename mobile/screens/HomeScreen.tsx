@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   RefreshControl,
@@ -15,14 +15,16 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { ComponentProps } from "react";
 import type { HomeStackParamList } from "../App";
 import MosqueSkyline from "../components/MosqueSkyline";
+import ScreenBackground from "../components/ScreenBackground";
 import { supabase } from "../lib/supabase";
 import { PrayerTime, Location, Masjid } from "../lib/types";
-import { getCurrentPrayer, getNextPrayer, todayMonthDay } from "../lib/prayerLogic";
+import { getCurrentPrayer, getNextPrayer, hasPrayerTimeArrived, todayMonthDay } from "../lib/prayerLogic";
 import { formatHijri } from "../lib/hijri";
 import { getHomeCity, getHomeMasjidId } from "../lib/homeMasjid";
 import { getQuranActivityToday } from "../lib/quranProgress";
 import { getTodaySalatChecklist, toggleSalat, SALAT_ORDER, SalatChecklist } from "../lib/salatChecklist";
 import { getActiveNotices, Notice } from "../lib/notices";
+import { getTodayAyahRef } from "../lib/ayahOfDay";
 import { useAuth } from "../lib/useAuth";
 import { useTheme } from "../lib/ThemeContext";
 import type { Theme } from "../theme";
@@ -31,16 +33,23 @@ type Nav = NativeStackNavigationProp<HomeStackParamList, "HomeMain">;
 type IoniconName = ComponentProps<typeof Ionicons>["name"];
 type MCIName = ComponentProps<typeof MaterialCommunityIcons>["name"];
 
-// Everything except Ask/Account lives in this same Home stack; those two are
-// sibling *tabs*, reached via the parent tab navigator instead.
+interface AyahOfDay {
+  surahNumber: number;
+  surahEnglishName: string;
+  ayahNumber: number;
+  arabic: string;
+  translation: string;
+}
+
+// Everything except Ask/Settings/Account lives in this same Home stack; those
+// are sibling *tabs*, reached via the parent tab navigator instead.
 const HOME_STACK_SCREENS = new Set([
   "Qibla",
   "QuranList",
-  "Hadith",
+  "BooksHadith",
   "Tasbih",
   "Dua",
   "Donate",
-  "Settings",
   "Masjids",
   "HalalFood",
 ]);
@@ -55,13 +64,12 @@ type GridItem = {
 const GRID_ITEMS: GridItem[] = [
   { key: "Qibla", label: "Qibla", set: "ion", icon: "compass-outline" },
   { key: "QuranList", label: "Qur'an", set: "ion", icon: "book-outline" },
-  { key: "Hadith", label: "Hadith", set: "ion", icon: "document-text-outline" },
+  { key: "BooksHadith", label: "Books & Hadith", set: "ion", icon: "document-text-outline" },
   { key: "Tasbih", label: "Tasbih", set: "mci", icon: "counter" },
   { key: "Masjids", label: "Masjids", set: "mci", icon: "mosque" },
   { key: "HalalFood", label: "Halal Food", set: "ion", icon: "restaurant-outline" },
   { key: "Dua", label: "Dua", set: "mci", icon: "hands-pray" },
   { key: "Donate", label: "Donate", set: "ion", icon: "heart-outline" },
-  { key: "Settings", label: "Settings", set: "ion", icon: "settings-outline" },
   { key: "Ask", label: "Ask AI", set: "ion", icon: "chatbubble-ellipses-outline" },
   { key: "Account", label: "Account", set: "ion", icon: "person-outline" },
 ];
@@ -86,11 +94,14 @@ export default function HomeScreen() {
   const [location, setLocation] = useState<Location | null>(null);
   const [today, setToday] = useState<PrayerTime | null>(null);
   const [tomorrow, setTomorrow] = useState<PrayerTime | null>(null);
-  const [masjids, setMasjids] = useState<Masjid[]>([]);
   const [homeMasjid, setHomeMasjid] = useState<Masjid | null>(null);
-  const [selectedCity, setSelectedCity] = useState<string | null>(null);
   const [notices, setNotices] = useState<Notice[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [ayahOfDay, setAyahOfDay] = useState<AyahOfDay | null>(null);
+  // Only the very first load shows the big spinner; every later focus-triggered
+  // refresh happens silently behind the data already on screen.
+  const hasLoadedRef = useRef(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [now, setNow] = useState(new Date());
   const [checklist, setChecklist] = useState<SalatChecklist>({
     fajr: false,
@@ -101,8 +112,10 @@ export default function HomeScreen() {
   });
   const [quranActivity, setQuranActivity] = useState(0);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (opts?: { pullToRefresh?: boolean }) => {
+    if (!hasLoadedRef.current) setInitialLoading(true);
+    else if (opts?.pullToRefresh) setRefreshing(true);
+
     const [{ data: loc }, homeCity, homeMasjidId, todayChecklist, quranCount, activeNotices] =
       await Promise.all([
         supabase.from("locations").select("*").eq("is_default", true).single(),
@@ -113,7 +126,6 @@ export default function HomeScreen() {
         getActiveNotices(),
       ]);
     setLocation((loc as Location | null) ?? null);
-    setSelectedCity(homeCity);
     setChecklist(todayChecklist);
     setQuranActivity(quranCount);
     setNotices(activeNotices);
@@ -155,13 +167,9 @@ export default function HomeScreen() {
       setHomeMasjid(null);
     }
 
-    const masjidQuery = supabase.from("masjids").select("*").eq("is_approved", true).limit(6);
-    const { data: nearbyMasjids } = homeCity
-      ? await masjidQuery.eq("city", homeCity)
-      : await masjidQuery.order("created_at", { ascending: false });
-    setMasjids((nearbyMasjids as Masjid[]) ?? []);
-
-    setLoading(false);
+    hasLoadedRef.current = true;
+    setInitialLoading(false);
+    setRefreshing(false);
   }, []);
 
   useFocusEffect(
@@ -169,6 +177,25 @@ export default function HomeScreen() {
       load();
     }, [load])
   );
+
+  // The Ayah of the Day is deterministic and doesn't depend on Supabase data,
+  // so it only needs to load once (it's the same all day).
+  useEffect(() => {
+    const ref = getTodayAyahRef();
+    fetch(`https://api.alquran.cloud/v1/ayah/${ref.surah}:${ref.ayah}/editions/quran-uthmani,en.sahih`)
+      .then((r) => r.json())
+      .then((json) => {
+        const [arabicEd, enEd] = json.data;
+        setAyahOfDay({
+          surahNumber: arabicEd.surah.number,
+          surahEnglishName: arabicEd.surah.englishName,
+          ayahNumber: arabicEd.numberInSurah,
+          arabic: arabicEd.text,
+          translation: enEd.text,
+        });
+      })
+      .catch(() => setAyahOfDay(null));
+  }, []);
 
   useEffect(() => {
     const tick = setInterval(() => setNow(new Date()), 30_000);
@@ -182,6 +209,7 @@ export default function HomeScreen() {
   const doneCount = SALAT_ORDER.filter((p) => checklist[p.key]).length;
 
   async function handleToggleSalat(key: (typeof SALAT_ORDER)[number]["key"]) {
+    if (today && !hasPrayerTimeArrived(today, key, now)) return; // can't log a prayer before its time
     const updated = await toggleSalat(key);
     setChecklist(updated);
   }
@@ -197,178 +225,202 @@ export default function HomeScreen() {
     }
   }
 
+  function openAyahOfDay() {
+    if (!ayahOfDay) return;
+    navigation.navigate("SurahDetail", {
+      number: ayahOfDay.surahNumber,
+      englishName: ayahOfDay.surahEnglishName,
+    });
+  }
+
   const firstName = profile?.full_name?.trim().split(/\s+/)[0];
 
   return (
-    <ScrollView
-      style={styles.page}
-      contentContainerStyle={{ paddingBottom: 32 }}
-      refreshControl={<RefreshControl refreshing={false} onRefresh={load} tintColor={theme.colors.accent} />}
-    >
-      <LinearGradient
-        colors={[theme.colors.skyTop, theme.colors.skyMid, theme.colors.skyBottom]}
-        style={styles.hero}
+    <ScreenBackground>
+      <ScrollView
+        style={styles.page}
+        contentContainerStyle={{ paddingBottom: 32 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => load({ pullToRefresh: true })}
+            tintColor={theme.colors.accent}
+          />
+        }
       >
-        <View style={styles.topBar}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.greeting} numberOfLines={1}>
-              Assalamu alaikum{firstName ? `, ${firstName}` : ""}
-            </Text>
-            <View style={styles.locationRow}>
-              <Ionicons name="location-outline" size={13} color={theme.colors.textOnDarkMuted} />
-              <Text style={styles.locationText} numberOfLines={1}>
-                {homeMasjid ? homeMasjid.name : (location?.name ?? "Set your location")}
+        <LinearGradient
+          colors={[theme.colors.skyTop, theme.colors.skyMid, theme.colors.skyBottom]}
+          style={styles.hero}
+        >
+          <View style={styles.topBar}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.greeting} numberOfLines={1}>
+                Assalamu alaikum{firstName ? `, ${firstName}` : ""}
               </Text>
-            </View>
-          </View>
-          <TouchableOpacity style={styles.bellButton} onPress={() => navigation.navigate("Settings")}>
-            <Ionicons name="notifications-outline" size={18} color={theme.colors.textOnDark} />
-          </TouchableOpacity>
-        </View>
-
-        <Text style={styles.dateText}>
-          {now.toLocaleDateString(undefined, {
-            weekday: "long",
-            day: "numeric",
-            month: "long",
-          })}
-          {"  •  "}
-          {formatHijri(now)} AH
-        </Text>
-
-        {loading ? (
-          <ActivityIndicator color="white" style={{ marginVertical: 40 }} />
-        ) : !today ? (
-          <View style={styles.glassCard}>
-            <Text style={styles.emptyText}>
-              No prayer time data yet. Add it from the admin dashboard.
-            </Text>
-          </View>
-        ) : (
-          <View style={styles.glassCard}>
-            {next && (
-              <View style={styles.prayerCols}>
-                <View style={styles.prayerCol}>
-                  <Text style={styles.glassLabel}>Current</Text>
-                  <Text style={styles.currentPrayerLabel}>{current?.label ?? "—"}</Text>
-                  <Text style={styles.endsAtText}>until {next.time.toTimeString().slice(0, 5)}</Text>
-                </View>
-                <View style={styles.colDivider} />
-                <View style={styles.prayerCol}>
-                  <Text style={styles.glassLabel}>Next prayer</Text>
-                  <Text style={styles.nowPrayerLabel}>{next.label}</Text>
-                  <Text style={styles.nowPrayerTime}>{next.time.toTimeString().slice(0, 5)}</Text>
-                </View>
-              </View>
-            )}
-            {homeMasjid && (
-              <View style={styles.jamatBanner}>
-                <Text style={styles.jamatBannerText}>
-                  {nextJamat
-                    ? `Jamat at ${homeMasjid.name}: ${nextJamat}`
-                    : `${homeMasjid.name} hasn't set a Jamat time for ${next?.label ?? "this prayer"} yet`}
+              <View style={styles.locationRow}>
+                <Ionicons name="location-outline" size={13} color={theme.colors.textOnDarkMuted} />
+                <Text style={styles.locationText} numberOfLines={1}>
+                  {homeMasjid ? homeMasjid.name : (location?.name ?? "Set your location")}
                 </Text>
               </View>
-            )}
+            </View>
+            <TouchableOpacity
+              style={styles.bellButton}
+              onPress={() => navigation.getParent()?.navigate("Settings")}
+            >
+              <Ionicons name="notifications-outline" size={18} color={theme.colors.textOnDark} />
+            </TouchableOpacity>
           </View>
-        )}
 
-        <MosqueSkyline color={theme.colors.gold} style={styles.skyline} />
-      </LinearGradient>
+          <Text style={styles.dateText}>
+            {now.toLocaleDateString(undefined, {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+            })}
+            {"  •  "}
+            {formatHijri(now)} AH
+          </Text>
 
-      {notices.length > 0 && (
-        <View style={[styles.noticeCard, theme.cardShadow]}>
-          <View style={styles.noticeIconWrap}>
-            <Ionicons name="megaphone-outline" size={16} color={theme.colors.accentDark} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.noticeTitle}>{notices[0].title}</Text>
-            <Text style={styles.noticeBody}>{notices[0].body}</Text>
-          </View>
-        </View>
-      )}
-
-      <View style={[styles.progressCard, theme.cardShadow]}>
-        <Text style={styles.progressTitle}>Today's Progress</Text>
-
-        <View style={styles.salatRow}>
-          {SALAT_ORDER.map((p) => {
-            const done = checklist[p.key];
-            return (
-              <TouchableOpacity
-                key={p.key}
-                style={styles.salatItem}
-                onPress={() => handleToggleSalat(p.key)}
-              >
-                <View style={[styles.salatDot, done && styles.salatDotDone]}>
-                  {done && <Ionicons name="checkmark" size={16} color="white" />}
+          {initialLoading ? (
+            <ActivityIndicator color="white" style={{ marginVertical: 40 }} />
+          ) : !today ? (
+            <View style={styles.glassCard}>
+              <Text style={styles.emptyText}>
+                No prayer time data yet. Add it from the admin dashboard.
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.glassCard}>
+              {next && (
+                <View style={styles.prayerCols}>
+                  <View style={styles.prayerCol}>
+                    <Text style={styles.glassLabel}>Current</Text>
+                    <Text style={styles.currentPrayerLabel}>{current?.label ?? "—"}</Text>
+                    <Text style={styles.endsAtText}>until {next.time.toTimeString().slice(0, 5)}</Text>
+                  </View>
+                  <View style={styles.colDivider} />
+                  <View style={styles.prayerCol}>
+                    <Text style={styles.glassLabel}>Next prayer</Text>
+                    <Text style={styles.nowPrayerLabel}>{next.label}</Text>
+                    <Text style={styles.nowPrayerTime}>{next.time.toTimeString().slice(0, 5)}</Text>
+                  </View>
                 </View>
-                <Text style={styles.salatLabel}>{p.label}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        <View style={styles.progressBarTrack}>
-          <View style={[styles.progressBarFill, { width: `${(doneCount / 5) * 100}%` }]} />
-        </View>
-        <Text style={styles.progressSubtitle}>
-          {doneCount} of 5 prayers logged today
-          {quranActivity > 0 ? `  •  Qur'an opened ${quranActivity}× today` : ""}
-        </Text>
-      </View>
-
-      <View style={styles.grid}>
-        {GRID_ITEMS.map((item, i) => (
-          <TouchableOpacity key={item.key} style={styles.gridTile} onPress={() => goTo(item.key)}>
-            <View style={[styles.gridIconWrap, { backgroundColor: tileColors[i % tileColors.length] }]}>
-              {item.set === "ion" ? (
-                <Ionicons name={item.icon as IoniconName} size={24} color="white" />
-              ) : (
-                <MaterialCommunityIcons name={item.icon as MCIName} size={24} color="white" />
+              )}
+              {homeMasjid && (
+                <View style={styles.jamatBanner}>
+                  <Text style={styles.jamatBannerText}>
+                    {nextJamat
+                      ? `Jamat at ${homeMasjid.name}: ${nextJamat}`
+                      : `${homeMasjid.name} hasn't set a Jamat time for ${next?.label ?? "this prayer"} yet`}
+                  </Text>
+                </View>
               )}
             </View>
-            <Text style={styles.gridLabel}>{item.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+          )}
 
-      <View style={styles.sectionHeaderRow}>
-        <Text style={styles.sectionHeader}>
-          {selectedCity ? `Mosques in ${selectedCity}` : "Mosques"}
-        </Text>
-        <TouchableOpacity onPress={() => navigation.navigate("Masjids")}>
-          <Text style={styles.seeAll}>See all</Text>
-        </TouchableOpacity>
-      </View>
+          <MosqueSkyline color={theme.colors.gold} style={styles.skyline} />
+        </LinearGradient>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.mosqueRow}>
-        {masjids.length === 0 && !loading && (
-          <Text style={styles.emptyTextDark}>No masjids added yet.</Text>
-        )}
-        {masjids.map((m) => (
-          <TouchableOpacity
-            key={m.id}
-            style={styles.mosqueCard}
-            onPress={() => navigation.navigate("MasjidDetail", { id: m.id })}
-          >
-            <View style={styles.mosquePhoto}>
-              <MaterialCommunityIcons name="mosque" size={30} color={theme.colors.accent} />
+        {notices.length > 0 && (
+          <View style={[styles.noticeCard, theme.cardShadow]}>
+            <View style={styles.noticeIconWrap}>
+              <Ionicons name="megaphone-outline" size={16} color={theme.colors.accentDark} />
             </View>
-            <Text style={styles.mosqueName} numberOfLines={1}>{m.name}</Text>
-            {m.address && (
-              <Text style={styles.mosqueAddress} numberOfLines={1}>{m.address}</Text>
-            )}
-          </TouchableOpacity>
-        ))}
+            <View style={{ flex: 1 }}>
+              <Text style={styles.noticeTitle}>{notices[0].title}</Text>
+              <Text style={styles.noticeBody}>{notices[0].body}</Text>
+            </View>
+          </View>
+        )}
+
+        <View style={[styles.progressCard, theme.cardShadow]}>
+          <Text style={styles.progressTitle}>Today's Progress</Text>
+
+          <View style={styles.salatRow}>
+            {SALAT_ORDER.map((p) => {
+              const done = checklist[p.key];
+              const arrived = !today || hasPrayerTimeArrived(today, p.key, now);
+              return (
+                <TouchableOpacity
+                  key={p.key}
+                  style={styles.salatItem}
+                  disabled={!arrived}
+                  onPress={() => handleToggleSalat(p.key)}
+                >
+                  <View
+                    style={[
+                      styles.salatDot,
+                      done && styles.salatDotDone,
+                      !arrived && styles.salatDotDisabled,
+                    ]}
+                  >
+                    {done && <Ionicons name="checkmark" size={16} color="white" />}
+                    {!done && !arrived && (
+                      <Ionicons name="lock-closed" size={12} color={theme.colors.textMuted} />
+                    )}
+                  </View>
+                  <Text style={[styles.salatLabel, !arrived && styles.salatLabelDisabled]}>
+                    {p.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <View style={styles.progressBarTrack}>
+            <View style={[styles.progressBarFill, { width: `${(doneCount / 5) * 100}%` }]} />
+          </View>
+          <Text style={styles.progressSubtitle}>
+            {doneCount} of 5 prayers logged today
+            {quranActivity > 0 ? `  •  Qur'an opened ${quranActivity}× today` : ""}
+          </Text>
+        </View>
+
+        <View style={styles.grid}>
+          {GRID_ITEMS.map((item, i) => (
+            <TouchableOpacity key={item.key} style={styles.gridTile} onPress={() => goTo(item.key)}>
+              <View style={[styles.gridIconWrap, { backgroundColor: tileColors[i % tileColors.length] }]}>
+                {item.set === "ion" ? (
+                  <Ionicons name={item.icon as IoniconName} size={24} color="white" />
+                ) : (
+                  <MaterialCommunityIcons name={item.icon as MCIName} size={24} color="white" />
+                )}
+              </View>
+              <Text style={styles.gridLabel}>{item.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {ayahOfDay && (
+          <>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionHeader}>Ayah of the Day</Text>
+            </View>
+            <TouchableOpacity
+              style={[styles.ayahCard, theme.cardShadow]}
+              onPress={openAyahOfDay}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.ayahArabic}>{ayahOfDay.arabic}</Text>
+              <Text style={styles.ayahTranslation}>{ayahOfDay.translation}</Text>
+              <View style={styles.ayahFooterRow}>
+                <Text style={styles.ayahReference}>
+                  {ayahOfDay.surahEnglishName} {ayahOfDay.surahNumber}:{ayahOfDay.ayahNumber}
+                </Text>
+                <Ionicons name="arrow-forward" size={14} color={theme.colors.accent} />
+              </View>
+            </TouchableOpacity>
+          </>
+        )}
       </ScrollView>
-    </ScrollView>
+    </ScreenBackground>
   );
 }
 
 function makeStyles(theme: Theme) {
   return StyleSheet.create({
-    page: { flex: 1, backgroundColor: theme.colors.pageBg },
+    page: { flex: 1, backgroundColor: "transparent" },
     hero: {
       paddingTop: 56,
       paddingHorizontal: 20,
@@ -404,7 +456,6 @@ function makeStyles(theme: Theme) {
     currentPrayerLabel: { color: theme.colors.textOnDark, fontSize: 22, fontWeight: "800", marginTop: 4 },
     endsAtText: { color: theme.colors.textOnDarkMuted, fontSize: 11, marginTop: 3, fontWeight: "600" },
     emptyText: { color: theme.colors.textOnDarkMuted, textAlign: "center" },
-    emptyTextDark: { color: theme.colors.textMuted, paddingHorizontal: 20 },
     nowPrayerLabel: { color: theme.colors.gold, fontSize: 18, fontWeight: "700", marginTop: 4 },
     nowPrayerTime: { color: theme.colors.textOnDark, fontSize: 26, fontWeight: "800", marginTop: 2 },
     jamatBanner: {
@@ -462,7 +513,9 @@ function makeStyles(theme: Theme) {
       justifyContent: "center",
     },
     salatDotDone: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
+    salatDotDisabled: { opacity: 0.45 },
     salatLabel: { fontSize: 11, color: theme.colors.textMuted, fontWeight: "600" },
+    salatLabelDisabled: { opacity: 0.5 },
     progressBarTrack: {
       height: 6,
       borderRadius: 3,
@@ -500,20 +553,30 @@ function makeStyles(theme: Theme) {
       marginBottom: 12,
     },
     sectionHeader: { fontSize: 17, fontWeight: "700", color: theme.colors.textPrimary },
-    seeAll: { fontSize: 13, color: theme.colors.accent, fontWeight: "600" },
-    mosqueRow: { paddingHorizontal: 20, gap: 14 },
-    mosqueCard: { width: 150 },
-    mosquePhoto: {
-      ...theme.cardShadow,
-      width: 150,
-      height: 100,
-      borderRadius: theme.radius.md,
-      backgroundColor: theme.colors.pageBg,
-      alignItems: "center",
-      justifyContent: "center",
-      marginBottom: 8,
+    ayahCard: {
+      backgroundColor: theme.colors.cardBg,
+      borderRadius: theme.radius.lg,
+      padding: theme.spacing.lg,
+      marginHorizontal: 20,
     },
-    mosqueName: { fontSize: 13, fontWeight: "700", color: theme.colors.textPrimary },
-    mosqueAddress: { fontSize: 11, color: theme.colors.textMuted, marginTop: 2 },
+    ayahArabic: {
+      fontSize: 20,
+      textAlign: "right",
+      writingDirection: "rtl",
+      lineHeight: 34,
+      color: theme.colors.textPrimary,
+      marginBottom: 10,
+    },
+    ayahTranslation: { fontSize: 13, color: theme.colors.textMuted, lineHeight: 20, fontStyle: "italic" },
+    ayahFooterRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginTop: 12,
+      paddingTop: 12,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: theme.colors.border,
+    },
+    ayahReference: { fontSize: 12, fontWeight: "700", color: theme.colors.accent },
   });
 }

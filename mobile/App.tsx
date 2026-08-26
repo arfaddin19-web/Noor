@@ -6,6 +6,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 
 import OnboardingScreen from "./screens/OnboardingScreen";
 import MasjidSetupScreen from "./screens/MasjidSetupScreen";
@@ -15,7 +16,8 @@ import QuranScreen from "./screens/QuranScreen";
 import SurahDetailScreen from "./screens/SurahDetailScreen";
 import JuzDetailScreen from "./screens/JuzDetailScreen";
 import PageDetailScreen from "./screens/PageDetailScreen";
-import HadithScreen from "./screens/HadithScreen";
+import BooksHadithScreen from "./screens/BooksHadithScreen";
+import HadithBookScreen from "./screens/HadithBookScreen";
 import TasbihScreen from "./screens/TasbihScreen";
 import DuaScreen from "./screens/DuaScreen";
 import DonateScreen from "./screens/DonateScreen";
@@ -31,6 +33,7 @@ import { hasSeenOnboarding, markOnboardingSeen } from "./lib/onboarding";
 import { isMasjidSetupDone } from "./lib/homeMasjid";
 import { navigationRef } from "./lib/navigationRef";
 import { ThemeProvider, useTheme } from "./lib/ThemeContext";
+import { HADITH_BOOKS } from "./lib/hadithBooks";
 import type { Theme } from "./theme";
 
 export type HomeStackParamList = {
@@ -40,11 +43,11 @@ export type HomeStackParamList = {
   SurahDetail: { number: number; englishName: string };
   JuzDetail: { number: number };
   PageDetail: { number: number };
-  Hadith: undefined;
+  BooksHadith: undefined;
+  HadithBook: { key: string };
   Tasbih: undefined;
   Dua: undefined;
   Donate: undefined;
-  Settings: undefined;
   Masjids: undefined;
   HalalFood: undefined;
   MasjidDetail: { id: string };
@@ -69,11 +72,17 @@ function HomeStackNavigator() {
       <HomeStack.Screen name="SurahDetail" component={SurahDetailScreen} options={{ headerShown: false }} />
       <HomeStack.Screen name="JuzDetail" component={JuzDetailScreen} options={{ headerShown: false }} />
       <HomeStack.Screen name="PageDetail" component={PageDetailScreen} options={{ headerShown: false }} />
-      <HomeStack.Screen name="Hadith" component={HadithScreen} options={{ title: "Hadith" }} />
+      <HomeStack.Screen name="BooksHadith" component={BooksHadithScreen} options={{ title: "Books & Hadith" }} />
+      <HomeStack.Screen
+        name="HadithBook"
+        component={HadithBookScreen}
+        options={({ route }) => ({
+          title: HADITH_BOOKS.find((b) => b.key === route.params.key)?.name ?? "Hadith",
+        })}
+      />
       <HomeStack.Screen name="Tasbih" component={TasbihScreen} options={{ title: "Tasbih" }} />
       <HomeStack.Screen name="Dua" component={DuaScreen} options={{ title: "Dua" }} />
       <HomeStack.Screen name="Donate" component={DonateScreen} options={{ title: "Donate" }} />
-      <HomeStack.Screen name="Settings" component={SettingsScreen} options={{ title: "Settings" }} />
       <HomeStack.Screen name="Masjids" component={MasjidsScreen} options={{ title: "Masjids" }} />
       <HomeStack.Screen name="HalalFood" component={HalalFoodScreen} options={{ title: "Halal Food" }} />
       <HomeStack.Screen
@@ -90,11 +99,19 @@ function HomeStackNavigator() {
   );
 }
 
+// Every secondary screen's header uses the same deep-emerald gradient as the
+// Home hero ("prayer time" banner), instead of a flat single-color bar.
 function headerOptions(theme: Theme) {
   return {
-    headerStyle: { backgroundColor: theme.colors.cardBg },
-    headerTintColor: theme.colors.accent,
-    headerTitleStyle: { color: theme.colors.textPrimary, fontWeight: "700" as const },
+    headerTransparent: false,
+    headerBackground: () => (
+      <LinearGradient
+        colors={[theme.colors.skyTop, theme.colors.skyMid, theme.colors.skyBottom]}
+        style={{ flex: 1 }}
+      />
+    ),
+    headerTintColor: theme.colors.textOnDark,
+    headerTitleStyle: { color: theme.colors.textOnDark, fontWeight: "700" as const },
   };
 }
 
@@ -128,6 +145,16 @@ function MainTabs() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="chatbubble-ellipses-outline" size={size} color={color} />
           ),
+        }}
+      />
+      <Tab.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{
+          headerShown: true,
+          ...headerOptions(theme),
+          title: "Settings",
+          tabBarIcon: ({ color, size }) => <Ionicons name="settings-outline" size={size} color={color} />,
         }}
       />
       <Tab.Screen

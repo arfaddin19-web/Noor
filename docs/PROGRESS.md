@@ -8,12 +8,12 @@ up correctly in the mobile app.
 
 ## Done
 
-- **Supabase schema** (`supabase/migrations/0001`–`0008`): profiles (role-based),
+- **Supabase schema** (`supabase/migrations/0001`–`0009`): profiles (role-based),
   locations, prayer_times (national Adhan times), masjids (Jamat times + city/district),
   halal_food_places, ai_qa_history, app_settings, **notices** (admin announcements,
   0008) — with RLS (public read, admin write) **and** explicit grants for
   `anon`/`authenticated` (0006 — see the note below, this was the cause of a real
-  "permission denied" bug).
+  "permission denied" bug). `0009_fix_pm_times.sql` corrects a real data bug — see below.
 - **Prayer time data**: transcribed from the IQRA Tutorial Hub calendar PDF, seeded as
   a single nationwide **Nepal** location (366 rows = 365 days + Feb 29).
 - **Adhan vs. Jamat**: `prayer_times` holds the national Adhan (start) times; each
@@ -51,15 +51,24 @@ up correctly in the mobile app.
     i.e. when the next prayer starts) alongside the next prayer's name and time; Jamat
     line when a masjid is set. An **admin Notice banner** appears when one is published.
     Below that, a real **Today's Progress** card — a tappable 5-prayer checklist (stored
-    per-day on-device) with a completion bar, plus an honest "Qur'an opened N× today"
-    count (no fabricated percentages). Then a bigger 3-column icon grid: Qibla, Qur'an,
-    Hadith, Tasbih, Masjids, Halal Food, Dua, Donate, Settings, Ask AI, Account.
-  - **Qibla**: a 300px ring with 10° tick marks (major at cardinals, minor elsewhere),
-    gold N/NE/E/SE/S/SW/W/NW labels, and a rotating two-tone needle (grey tail + red tip
-    topped with a 🕋) nested inside a rotating dial so the needle's on-screen angle
-    always equals `qiblaBearing - heading`. Center hub and status text turn green with
-    "You're facing Kaaba now" when aligned. (Intentionally skipped: a live map thumbnail
-    and compass-skin picker — decorative/heavy, not core functionality.)
+    per-day on-device, and a prayer can't be ticked before its own Adhan time has
+    actually arrived) with a completion bar, plus an honest "Qur'an opened N× today"
+    count. Then a bigger 3-column icon grid: Qibla, Qur'an, Books & Hadith, Tasbih,
+    Masjids, Halal Food, Dua, Donate, Ask AI, Account (Settings moved to its own bottom
+    tab — see Navigation below). An **Ayah of the Day** card closes out the screen —
+    deterministic by day-of-year from a curated list of ~25 standalone-meaningful verses
+    (so it never lands on an ayah that only makes sense mid-passage), fetched live and
+    tappable into that Surah. The whole screen (and most secondary screens) sits on a
+    soft gradient wash instead of a flat color, and only the very first load shows a
+    spinner — returning to Home from elsewhere refreshes quietly in the background.
+  - **Qibla**: heading now comes from `expo-location`'s `watchHeadingAsync` — the same
+    tilt-compensated, sensor-fused API the phone's own Compass app uses — replacing the
+    earlier raw-magnetometer `atan2()` math, which was unreliable and could point the
+    needle backwards on some devices. A fixed triangular pointer now sits at the top of
+    the ring (doesn't rotate), the same convention as a real compass: the dial turns
+    underneath it, and alignment means the 🕋 needle meets that fixed pointer. 300px
+    ring, 10° tick marks, gold N/NE/E/SE/S/SW/W/NW labels. (Intentionally skipped: a
+    live map thumbnail and compass-skin picker — decorative/heavy, not core functionality.)
   - **Qur'an list**: "Last Read" hero card (jumps back into whichever Surah/Juz/Page you
     last opened), a **Bookmarks** row (long-press a chip to remove it), a Sura/Page/Juz
     underline-tab toggle, 8-point star badges on Surah/Juz rows, and a 604-tile Page grid
@@ -80,29 +89,45 @@ up correctly in the mobile app.
   - **Tasbih**: tap-to-count dhikr counter — circular dial with a fill-progress ring,
     target chips (33/99/100), vibration + auto-reset + rounds-completed counter when the
     target is hit, persisted on-device.
-  - **Dua**: a new screen with the Six Kalimas plus ~15 everyday duas (before/after
-    eating, sleep/waking, entering/leaving home and masjid, travel, distress, seeking
-    knowledge, parents, a comprehensive Qur'anic dua), each with Arabic, transliteration,
-    English translation, and a source reference — grouped into collapsible sections.
-    Local/offline data, no network dependency.
+  - **Dua**: the Six Kalimas plus **31 everyday duas across 8 categories** (Daily Life,
+    Salah & Repentance incl. the Sayyidul Istighfar, Health & Distress, Ramadan &
+    Fasting, Travel & Protection, Knowledge/Guidance & Family incl. the full Istikhara
+    dua, Comprehensive), each with Arabic, transliteration, English translation, and a
+    source reference. **All sections start collapsed** — tap one to expand it, rather
+    than everything open at once. Local/offline data, no network dependency; every entry
+    was chosen for confidence in its accuracy over padding the count.
+  - **Books & Hadith** (renamed from "Hadith"): a collapsed-by-default list of
+    collections — **Sahih al-Bukhari, Sahih Muslim, Sunan Abu Dawud, Jami' at-Tirmidhi,
+    Sunan an-Nasa'i, Sunan Ibn Majah** — each opens to its **full collection** (no more
+    30-hadith cap), grouped by book/chapter number, with an **English/Urdu** toggle.
+    *Muntakhab Ahadith and Bahishti Zewar are listed but marked honestly unavailable* —
+    no free, verified digital source for either was found (Bahishti Zewar is a fiqh
+    manual, not a hadith collection, besides), so nothing was fabricated to fill them in.
+    Hindi/Nepali translations aren't published by any free hadith source we could find
+    either — Urdu is offered as the closest available alternate-language reading.
   - **Donate**: shows a support message plus whichever of bank/account/eSewa/Khalti
     details the admin has filled in (`app_settings.donation_info`); values are
     press-and-hold to copy. Hides rows the admin left blank.
-  - **Settings**: prayer notification toggle, **Adhan sound on/off** (silent banner vs.
-    a sound — honestly scoped to what Expo Go/local notifications can actually do, no
+  - **Settings**: now its own **bottom tab** (Home / Ask / Settings / Account) rather than
+    a Home grid tile — prayer notification toggle, **Adhan sound on/off** (silent banner
+    vs. a sound — honestly scoped to what Expo Go/local notifications can actually do, no
     fabricated custom Adhan audio), and the **dark/light theme** toggle.
-  - **Masjids** / **Halal Food**: split into two separate screens/grid tiles (previously
-    one combined "Nearby" toggle) — each sorted by GPS distance from the device.
+  - **Masjids**: now has a **city search bar** at the top, so you can browse masjids in a
+    city you haven't traveled to yet — the list no longer depends on GPS permission
+    being granted (distance is shown when available, just omitted otherwise).
+  - **Halal Food**: split into its own screen/grid tile (previously combined with
+    Masjids under one "Nearby" toggle) — sorted by GPS distance from the device.
   - **Masjid Detail** / **Halal Food Detail**: hero image (placeholder if none set),
     address/phone, and for masjids a Prayer/Azan/Iqama table; a Directions button opens
     Maps.
   - **Ask**: AI Q&A chat UI wired to and verified working against the deployed
     `ask-ai` Supabase Edge Function (see below).
-  - **Account**: "Your Masjid" picker, a link into Settings, Supabase email/password
-    sign up & sign in, profile, sign out.
-  - Navigation stays 3 bottom tabs — **Home / Ask / Account** — with everything else
-    (Qibla, Qur'an, Hadith, Tasbih, Dua, Donate, Settings, Masjids, Halal Food) reached
-    via Home's icon grid/stack.
+  - **Account**: "Your Masjid" picker, Supabase email/password sign up & sign in,
+    profile, sign out.
+  - Navigation is now **4 bottom tabs — Home / Ask / Settings / Account** — with
+    everything else (Qibla, Qur'an, Books & Hadith, Tasbih, Dua, Donate, Masjids, Halal
+    Food) reached via Home's icon grid/stack. Every secondary screen's header now uses
+    the same deep-emerald gradient as the Home hero, instead of a flat bar.
 - **Push notifications**: `mobile/lib/notifications.ts` schedules a local notification
   for each remaining Adhan over the next 7 days, toggled from Account; re-schedules
   cleanly on every toggle so nothing piles up.
@@ -137,6 +162,24 @@ Worth keeping in mind if something looks broken again:
    Supabase's function gateway rejects outright. Ask AI is meant to work without
    signing in — fixed by falling back to the public anon key (both as `apikey` and as
    the bearer token) when signed out, same as every other Supabase call in the app.
+5. **"Current: Isha, Next: Fajr" at 2:38pm**: audited all 366 rows of the seeded
+   `prayer_times` data — every Asr/Maghrib/Isha value had been transcribed straight off
+   the source PDF's 12-hour clock without converting to 24-hour (e.g. Isha `6:49`
+   instead of the intended `18:49`). Since the app parses times as 24-hour, every
+   afternoon/evening prayer looked like it had already happened at 6-7am, so by early
+   afternoon *every* prayer looked "already passed," making the last one (Isha) show as
+   "current" and rolling over to tomorrow's Fajr as "next." Fixed with a one-time data
+   migration (`0009_fix_pm_times.sql`) adding 12 hours to those three columns —
+   confirmed via a full-table audit that no row already had a value ≥ 12 there, so the
+   fix is safe to apply uniformly. **Must be run in Supabase SQL Editor for existing
+   projects** — it's a data fix, not something `npm install` picks up.
+6. **Qibla needle pointing the wrong way on some devices**: the compass heading was
+   computed from the raw magnetometer vector via `atan2(y, x)` with a hand-guessed
+   offset — explicitly commented "device-dependent" in the original code, and it was
+   wrong for at least one real device, effectively inverting the needle. Replaced with
+   `expo-location`'s `watchHeadingAsync`, the tilt-compensated sensor-fusion API the
+   native Compass app itself uses — far more reliable, and the same convention every
+   real compass app relies on.
 
 ## Not yet done / next steps
 
@@ -145,10 +188,13 @@ Worth keeping in mind if something looks broken again:
 - Qur'an audio recitation ("Play"/"Auto-scroll") is not built — would need a reciter
   audio source wired up (AlQuran Cloud does offer per-ayah audio editions) plus an
   audio player; worth adding later if the user wants it, but not faked in the meantime.
-- Qibla compass heading math is a reasonable first pass but should be checked for
-  accuracy on a real device — magnetometer calibration/tilt-compensation varies by
-  phone.
-- Halal food doesn't have a city filter/picker like masjids do yet.
+- Muntakhab Ahadith and Bahishti Zewar are listed in Books & Hadith as honestly
+  unavailable — no free, verified digital source found for either. If the user has a
+  licensed text source for them, it can be wired in.
+- No Hindi or Nepali hadith translations exist in any free source we could find; Urdu
+  is offered instead. Worth revisiting if a Hindi/Nepali source turns up.
+- Halal food doesn't have the same city search bar Masjids just got — worth adding for
+  consistency if that turns out to matter as much there.
 - Adhan sound toggle controls whether the local notification plays a sound at all —
   Expo Go / local notifications can't ship a custom Adhan audio file without an EAS
   build, so this is scoped honestly to sound on/off rather than a specific Adhan clip.

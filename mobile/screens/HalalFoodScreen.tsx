@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { HomeStackParamList } from "../App";
+import ScreenBackground from "../components/ScreenBackground";
 import { supabase } from "../lib/supabase";
 import { HalalFoodPlace } from "../lib/types";
 import { distanceKm, formatDistance } from "../lib/geo";
@@ -52,7 +53,7 @@ export default function HalalFoodScreen() {
   }, [coords]);
 
   return (
-    <View style={styles.page}>
+    <ScreenBackground style={styles.page}>
       {error && (
         <View style={styles.center}>
           <Text style={styles.muted}>{error}</Text>
@@ -93,13 +94,13 @@ export default function HalalFoodScreen() {
           )}
         />
       )}
-    </View>
+    </ScreenBackground>
   );
 }
 
 function makeStyles(theme: Theme) {
   return StyleSheet.create({
-    page: { flex: 1, backgroundColor: theme.colors.pageBg },
+    page: { flex: 1, backgroundColor: "transparent" },
     center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
     muted: { color: theme.colors.textMuted, textAlign: "center" },
     listContent: { padding: theme.spacing.md },

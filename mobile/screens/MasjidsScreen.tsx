@@ -1,10 +1,19 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  FlatList,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import * as Location from "expo-location";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { HomeStackParamList } from "../App";
+import ScreenBackground from "../components/ScreenBackground";
 import { supabase } from "../lib/supabase";
 import { Masjid, JAMAT_LABELS } from "../lib/types";
 import { distanceKm, formatDistance } from "../lib/geo";
@@ -12,47 +21,87 @@ import { useTheme } from "../lib/ThemeContext";
 import type { Theme } from "../theme";
 
 type Nav = NativeStackNavigationProp<HomeStackParamList, "Masjids">;
+type MasjidWithDistance = Masjid & { distance: number | null };
 
 export default function MasjidsScreen() {
   const theme = useTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const navigation = useNavigation<Nav>();
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
-  const [masjids, setMasjids] = useState<(Masjid & { distance: number })[]>([]);
+  const [masjids, setMasjids] = useState<Masjid[]>([]);
+  const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // The list itself doesn't depend on location — someone browsing masjids in a
+  // city they haven't traveled to yet should still see everything, just
+  // without a distance shown.
+  useEffect(() => {
+    supabase
+      .from("masjids")
+      .select("*")
+      .eq("is_approved", true)
+      .then(({ data, error: err }) => {
+        if (err) setError("Couldn't load masjids. Check your connection.");
+        setMasjids((data as Masjid[]) ?? []);
+        setLoading(false);
+      });
+  }, []);
 
   useEffect(() => {
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        setError("Location permission is needed to find masjids near you.");
-        setLoading(false);
-        return;
-      }
+      if (status !== "granted") return; // fine — list still works, just without distances
       const pos = await Location.getCurrentPositionAsync({});
       setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
     })();
   }, []);
 
-  useEffect(() => {
-    if (!coords) return;
-    setLoading(true);
-    supabase
-      .from("masjids")
-      .select("*")
-      .eq("is_approved", true)
-      .then(({ data }) => {
-        const withDist = ((data as Masjid[]) ?? [])
-          .map((x) => ({ ...x, distance: distanceKm(coords.lat, coords.lng, x.latitude, x.longitude) }))
-          .sort((a, b) => a.distance - b.distance);
-        setMasjids(withDist);
-        setLoading(false);
-      });
-  }, [coords]);
+  const withDistance: MasjidWithDistance[] = useMemo(
+    () =>
+      masjids.map((m) => ({
+        ...m,
+        distance: coords ? distanceKm(coords.lat, coords.lng, m.latitude, m.longitude) : null,
+      })),
+    [masjids, coords]
+  );
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const list = q
+      ? withDistance.filter(
+          (m) =>
+            m.city?.toLowerCase().includes(q) ||
+            m.address?.toLowerCase().includes(q) ||
+            m.name.toLowerCase().includes(q)
+        )
+      : withDistance;
+    return [...list].sort((a, b) => {
+      if (a.distance != null && b.distance != null) return a.distance - b.distance;
+      if (a.distance != null) return -1;
+      if (b.distance != null) return 1;
+      return a.name.localeCompare(b.name);
+    });
+  }, [withDistance, query]);
 
   return (
-    <View style={styles.page}>
+    <ScreenBackground style={styles.page}>
+      <View style={styles.searchRow}>
+        <Ionicons name="search-outline" size={16} color={theme.colors.textMuted} />
+        <TextInput
+          value={query}
+          onChangeText={setQuery}
+          placeholder="Search by city (e.g. Kathmandu, Pokhara)…"
+          placeholderTextColor={theme.colors.textMuted}
+          style={styles.searchInput}
+        />
+        {query.length > 0 && (
+          <TouchableOpacity onPress={() => setQuery("")}>
+            <Ionicons name="close-circle" size={16} color={theme.colors.textMuted} />
+          </TouchableOpacity>
+        )}
+      </View>
+
       {error && (
         <View style={styles.center}>
           <Text style={styles.muted}>{error}</Text>
@@ -65,10 +114,14 @@ export default function MasjidsScreen() {
       )}
       {!error && !loading && (
         <FlatList
-          data={masjids}
+          data={filtered}
           keyExtractor={(m) => m.id}
           contentContainerStyle={styles.listContent}
-          ListEmptyComponent={<Text style={styles.muted}>No masjids listed nearby yet.</Text>}
+          ListEmptyComponent={
+            <Text style={styles.muted}>
+              {query ? `No masjids found for "${query}".` : "No masjids listed yet."}
+            </Text>
+          }
           renderItem={({ item }) => (
             <TouchableOpacity
               style={[styles.card, theme.cardShadow]}
@@ -78,11 +131,17 @@ export default function MasjidsScreen() {
                 <MaterialCommunityIcons name="mosque" size={20} color={theme.colors.accent} />
                 <Text style={styles.cardTitle}>{item.name}</Text>
               </View>
-              {item.address && <Text style={styles.cardSubtitle}>{item.address}</Text>}
-              <View style={styles.cardMeta}>
-                <Ionicons name="navigate-outline" size={13} color={theme.colors.accent} />
-                <Text style={styles.distance}>{formatDistance(item.distance)}</Text>
-              </View>
+              {(item.city || item.address) && (
+                <Text style={styles.cardSubtitle}>
+                  {[item.city, item.address].filter(Boolean).join(" — ")}
+                </Text>
+              )}
+              {item.distance != null && (
+                <View style={styles.cardMeta}>
+                  <Ionicons name="navigate-outline" size={13} color={theme.colors.accent} />
+                  <Text style={styles.distance}>{formatDistance(item.distance)}</Text>
+                </View>
+              )}
               <View style={styles.jamatRow}>
                 {JAMAT_LABELS.map(({ key, label }) =>
                   item[key] ? (
@@ -97,15 +156,29 @@ export default function MasjidsScreen() {
           )}
         />
       )}
-    </View>
+    </ScreenBackground>
   );
 }
 
 function makeStyles(theme: Theme) {
   return StyleSheet.create({
-    page: { flex: 1, backgroundColor: theme.colors.pageBg },
+    page: { flex: 1, backgroundColor: "transparent" },
     center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
     muted: { color: theme.colors.textMuted, textAlign: "center" },
+    searchRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      backgroundColor: theme.colors.cardBg,
+      borderRadius: theme.radius.pill,
+      marginHorizontal: theme.spacing.md,
+      marginTop: theme.spacing.md,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    searchInput: { flex: 1, fontSize: 14, color: theme.colors.textPrimary, padding: 0 },
     listContent: { padding: theme.spacing.md },
     card: {
       backgroundColor: theme.colors.cardBg,

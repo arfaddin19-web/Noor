@@ -147,6 +147,99 @@ export const DUA_CATEGORIES: DuaCategory[] = [
         translation: "O Allah, I ask You from Your bounty.",
         reference: "Muslim",
       },
+      {
+        title: "Before wudu (ablution)",
+        arabic: "بِسْمِ اللَّهِ",
+        transliteration: "Bismillah",
+        translation: "In the name of Allah.",
+        reference: "Abu Dawud, Tirmidhi",
+      },
+      {
+        title: "After wudu (ablution)",
+        arabic:
+          "أَشْهَدُ أَنْ لَا إِلَٰهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ، وَأَشْهَدُ أَنَّ مُحَمَّدًا عَبْدُهُ وَرَسُولُهُ، اَللَّهُمَّ اجْعَلْنِي مِنَ التَّوَّابِينَ وَاجْعَلْنِي مِنَ الْمُتَطَهِّرِينَ",
+        transliteration:
+          "Ashhadu al-lā ilāha illallāhu wahdahu lā sharīka lah, wa ashhadu anna Muhammadan 'abduhu wa rasūluh, Allāhummaj'alnī minat-tawwābīna waj'alnī minal-mutatahhirīn",
+        translation:
+          "I bear witness that there is none worthy of worship except Allah, alone, without partner, and I bear witness that Muhammad ﷺ is His servant and messenger. O Allah, make me among those who repent often and among those who purify themselves.",
+        reference: "Muslim",
+      },
+    ],
+  },
+  {
+    key: "salah",
+    title: "Salah & Repentance",
+    items: [
+      {
+        title: "After the Adhan (call to prayer)",
+        arabic:
+          "اَللَّهُمَّ رَبَّ هَذِهِ الدَّعْوَةِ التَّامَّةِ وَالصَّلَاةِ الْقَائِمَةِ آتِ مُحَمَّدًا الْوَسِيلَةَ وَالْفَضِيلَةَ وَابْعَثْهُ مَقَامًا مَحْمُودًا الَّذِي وَعَدْتَهُ",
+        transliteration:
+          "Allāhumma rabba hādhihid-da'watit-tāmmah, was-salātil-qā'imah, āti Muhammadanil-wasīlata wal-fadīlah, wab'ath-hu maqāman mahmūdanil-ladhī wa'adtah",
+        translation:
+          "O Allah, Lord of this perfect call and the established prayer, grant Muhammad ﷺ the intercession and favor, and raise him to the praiseworthy station You promised him.",
+        reference: "Bukhari",
+      },
+      {
+        title: "Sayyidul Istighfar — the master supplication for forgiveness",
+        arabic:
+          "اَللَّهُمَّ أَنْتَ رَبِّي لَا إِلَٰهَ إِلَّا أَنْتَ، خَلَقْتَنِي وَأَنَا عَبْدُكَ، وَأَنَا عَلَى عَهْدِكَ وَوَعْدِكَ مَا اسْتَطَعْتُ، أَعُوذُ بِكَ مِنْ شَرِّ مَا صَنَعْتُ، أَبُوءُ لَكَ بِنِعْمَتِكَ عَلَيَّ، وَأَبُوءُ بِذَنْبِي فَاغْفِرْ لِي فَإِنَّهُ لَا يَغْفِرُ الذُّنُوبَ إِلَّا أَنْتَ",
+        transliteration:
+          "Allāhumma anta rabbī lā ilāha illā ant, khalaqtanī wa ana 'abduka, wa ana 'alā 'ahdika wa wa'dika mastata'tu, a'ūdhu bika min sharri mā sana'tu, abū'u laka bini'matika 'alayya, wa abū'u bidhambī faghfir lī fa innahu lā yaghfirudh-dhunūba illā ant",
+        translation:
+          "O Allah, You are my Lord, there is none worthy of worship except You. You created me and I am Your servant, and I am upon Your covenant and promise as much as I am able. I seek refuge in You from the evil of what I have done. I acknowledge Your favor upon me, and I acknowledge my sin, so forgive me — for none forgives sins except You.",
+        reference: "Bukhari",
+      },
+    ],
+  },
+  {
+    key: "health",
+    title: "Health & Distress",
+    items: [
+      {
+        title: "For someone who is sick",
+        arabic: "أَسْأَلُ اللَّهَ الْعَظِيمَ رَبَّ الْعَرْشِ الْعَظِيمِ أَنْ يَشْفِيَكَ",
+        transliteration: "As'alullāhal-'Azīma rabbal-'arshil-'azīmi an yashfiyak",
+        translation: "I ask Allah the Mighty, Lord of the Mighty Throne, to cure you.",
+        reference: "Abu Dawud, Tirmidhi",
+      },
+      {
+        title: "When it rains",
+        arabic: "اَللَّهُمَّ صَيِّبًا نَافِعًا",
+        transliteration: "Allāhumma sayyiban nāfi'ā",
+        translation: "O Allah, (bring) beneficial rain clouds.",
+        reference: "Bukhari",
+      },
+      {
+        title: "When sneezing / hearing someone sneeze",
+        arabic: "اَلْحَمْدُ لِلَّهِ ۝ يَرْحَمُكَ اللَّهُ ۝ يَهْدِيكُمُ اللَّهُ وَيُصْلِحُ بَالَكُمْ",
+        transliteration:
+          "(Sneezer) Alhamdulillah — (others) Yarhamukallah — (sneezer replies) Yahdīkumullāhu wa yuslihu bālakum",
+        translation:
+          "The sneezer says \"Praise be to Allah\"; others reply \"May Allah have mercy on you\"; the sneezer then replies \"May Allah guide you and set your affairs right.\"",
+        reference: "Bukhari",
+      },
+    ],
+  },
+  {
+    key: "ramadan",
+    title: "Ramadan & Fasting",
+    items: [
+      {
+        title: "Breaking the fast (iftar)",
+        arabic: "ذَهَبَ الظَّمَأُ وَابْتَلَّتِ الْعُرُوقُ وَثَبَتَ الْأَجْرُ إِنْ شَاءَ اللَّهُ",
+        transliteration: "Dhahaba adh-dhama'u wabtallatil-'urūqu wa thabatal-ajru in shā' Allāh",
+        translation:
+          "The thirst has gone, the veins are moistened, and the reward is confirmed, if Allah wills.",
+        reference: "Abu Dawud",
+      },
+      {
+        title: "Seeking Laylatul Qadr",
+        arabic: "اَللَّهُمَّ إِنَّكَ عَفُوٌّ تُحِبُّ الْعَفْوَ فَاعْفُ عَنِّي",
+        transliteration: "Allāhumma innaka 'afuwwun tuhibbul-'afwa fa'fu 'annī",
+        translation: "O Allah, You are Forgiving and love forgiveness, so forgive me.",
+        reference: "Tirmidhi (Aisha)",
+      },
     ],
   },
   {
@@ -189,7 +282,7 @@ export const DUA_CATEGORIES: DuaCategory[] = [
   },
   {
     key: "knowledge",
-    title: "Knowledge & Family",
+    title: "Knowledge, Guidance & Family",
     items: [
       {
         title: "Seeking knowledge",
@@ -204,6 +297,16 @@ export const DUA_CATEGORIES: DuaCategory[] = [
         transliteration: "Rabbir-hamhumā kamā rabbayānī saghīrā",
         translation: "My Lord, have mercy upon them as they raised me when I was small.",
         reference: "Qur'an 17:24",
+      },
+      {
+        title: "Istikhara — seeking guidance for a decision",
+        arabic:
+          "اَللَّهُمَّ إِنِّي أَسْتَخِيرُكَ بِعِلْمِكَ، وَأَسْتَقْدِرُكَ بِقُدْرَتِكَ، وَأَسْأَلُكَ مِنْ فَضْلِكَ الْعَظِيمِ، فَإِنَّكَ تَقْدِرُ وَلَا أَقْدِرُ، وَتَعْلَمُ وَلَا أَعْلَمُ، وَأَنْتَ عَلَّامُ الْغُيُوبِ، اَللَّهُمَّ إِنْ كُنْتَ تَعْلَمُ أَنَّ هَذَا الْأَمْرَ خَيْرٌ لِي فِي دِينِي وَمَعَاشِي وَعَاقِبَةِ أَمْرِي فَاقْدُرْهُ لِي وَيَسِّرْهُ لِي ثُمَّ بَارِكْ لِي فِيهِ، وَإِنْ كُنْتَ تَعْلَمُ أَنَّ هَذَا الْأَمْرَ شَرٌّ لِي فِي دِينِي وَمَعَاشِي وَعَاقِبَةِ أَمْرِي فَاصْرِفْهُ عَنِّي وَاصْرِفْنِي عَنْهُ وَاقْدُرْ لِيَ الْخَيْرَ حَيْثُ كَانَ ثُمَّ أَرْضِنِي بِهِ",
+        transliteration:
+          "Allāhumma innī astakhīruka bi'ilmika, wa astaqdiruka biqudratika, wa as'aluka min fadlikal-'azīm, fa innaka taqdiru wa lā aqdir, wa ta'lamu wa lā a'lam, wa anta 'allāmul-ghuyūb. Allāhumma in kunta ta'lamu anna hādhal-amra khayrun lī fī dīnī wa ma'āshī wa 'āqibati amrī faqdurhu lī wa yassirhu lī thumma bārik lī fīh, wa in kunta ta'lamu anna hādhal-amra sharrun lī fī dīnī wa ma'āshī wa 'āqibati amrī fasrifhu 'annī wasrifnī 'anhu waqdur liyal-khayra haythu kāna thumma ardinī bih",
+        translation:
+          "O Allah, I seek Your guidance by Your knowledge, and I seek ability by Your power, and I ask You of Your great bounty. You have power and I have none, and You know and I do not, and You are the Knower of the unseen. O Allah, if You know this matter to be good for me in my religion, my livelihood, and the outcome of my affairs, then decree it for me, make it easy for me, and bless it for me. And if You know this matter to be bad for me in my religion, my livelihood, and the outcome of my affairs, then turn it away from me and turn me away from it, and decree for me what is good wherever it may be, and make me content with it.",
+        reference: "Bukhari",
       },
     ],
   },

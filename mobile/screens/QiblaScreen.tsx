@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Animated, StyleSheet, Text, View } from "react-native";
 import * as Location from "expo-location";
-import { Magnetometer } from "expo-sensors";
 import { useTheme } from "../lib/ThemeContext";
 import type { Theme } from "../theme";
 
@@ -49,17 +48,29 @@ function angleDiff(a: number, b: number): number {
   return ((b - a + 540) % 360) - 180;
 }
 
-function useMagnetometerHeading() {
+/** The device's compass heading (0 = true north, clockwise), from the same OS
+ *  sensor-fusion API the native Compass app uses — tilt-compensated and far
+ *  more reliable than doing atan2() on the raw magnetometer vector ourselves. */
+function useDeviceHeading() {
   const [heading, setHeading] = useState(0);
 
   useEffect(() => {
-    Magnetometer.setUpdateInterval(200);
-    const sub = Magnetometer.addListener(({ x, y }) => {
-      let angle = Math.atan2(y, x) * (180 / Math.PI);
-      angle = (angle + 90 + 360) % 360; // adjust so 0 = north-ish; device-dependent
-      setHeading(angle);
+    let sub: Location.LocationSubscription | null = null;
+    let cancelled = false;
+
+    Location.watchHeadingAsync((h) => {
+      // trueHeading is -1 when the device can't determine it yet (e.g. still
+      // calibrating) — magHeading is always available as a fallback.
+      setHeading(h.trueHeading >= 0 ? h.trueHeading : h.magHeading);
+    }).then((s) => {
+      if (cancelled) s.remove();
+      else sub = s;
     });
-    return () => sub.remove();
+
+    return () => {
+      cancelled = true;
+      sub?.remove();
+    };
   }, []);
 
   return heading;
@@ -110,7 +121,7 @@ export default function QiblaScreen() {
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [qiblaBearing, setQiblaBearing] = useState<number | null>(null);
-  const heading = useMagnetometerHeading();
+  const heading = useDeviceHeading();
   const rotation = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -133,7 +144,9 @@ export default function QiblaScreen() {
 
   useEffect(() => {
     // Rotate the whole dial opposite to the device heading, like a real compass —
-    // North (and every mark/the needle) then points the true direction.
+    // North (and every mark/the needle) then points the true direction. The top
+    // of the ring, under the fixed pointer, always represents "where your phone
+    // is currently facing."
     const target = (-heading + 360) % 360;
     Animated.timing(rotation, {
       toValue: target,
@@ -173,6 +186,12 @@ export default function QiblaScreen() {
       </View>
 
       <View style={styles.compassWrap}>
+        {/* Fixed pointer — always at the top, doesn't rotate. Represents the top
+            of your phone, i.e. the direction you're physically facing. This is
+            the same convention as the iPhone's own Compass app: the dial turns
+            underneath a fixed reference marker, rather than the marker moving. */}
+        <View style={[styles.fixedPointer, isAligned && styles.fixedPointerAligned]} />
+
         <View style={styles.compassRing} />
 
         <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ rotate: dialSpin }] }]}>
@@ -204,7 +223,7 @@ export default function QiblaScreen() {
       </View>
 
       <Text style={[styles.statusText, isAligned && styles.statusTextAligned]}>
-        {isAligned ? "You're facing Kaaba now" : "Turn until the 🕋 points to the top"}
+        {isAligned ? "You're facing Kaaba now" : "Turn until the 🕋 lines up with the pointer at the top"}
       </Text>
     </View>
   );
@@ -235,6 +254,20 @@ function makeStyles(theme: Theme) {
     alignItems: "center",
     justifyContent: "center",
   },
+  fixedPointer: {
+    position: "absolute",
+    top: -10,
+    width: 0,
+    height: 0,
+    borderLeftWidth: 9,
+    borderRightWidth: 9,
+    borderTopWidth: 14,
+    borderLeftColor: "transparent",
+    borderRightColor: "transparent",
+    borderTopColor: theme.colors.textMuted,
+    zIndex: 2,
+  },
+  fixedPointerAligned: { borderTopColor: theme.colors.accent },
   compassRing: {
     ...theme.cardShadow,
     position: "absolute",

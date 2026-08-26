@@ -36,6 +36,10 @@ export interface ThemeColors {
 
   cardBg: string;
   pageBg: string;
+  // A subtle two-stop wash used behind content screens instead of a flat
+  // pageBg, so nothing reads as an empty plain background.
+  pageGradientTop: string;
+  pageGradientBottom: string;
   textPrimary: string;
   textMuted: string;
   border: string;
@@ -94,6 +98,8 @@ const darkColors: ThemeColors = {
   ...shared,
   cardBg: "#123d30",
   pageBg: "#081c17",
+  pageGradientTop: "#123626",
+  pageGradientBottom: "#081c17",
   textPrimary: "#f4efe3",
   textMuted: "rgba(244,239,227,0.64)",
   border: "rgba(255,255,255,0.10)",
@@ -103,6 +109,8 @@ const lightColors: ThemeColors = {
   ...shared,
   cardBg: "#ffffff",
   pageBg: "#eef7f2",
+  pageGradientTop: "#e6f5ed",
+  pageGradientBottom: "#f6fbf9",
   textPrimary: "#0f2b22",
   textMuted: "#5b7a6f",
   border: "#dcece5",

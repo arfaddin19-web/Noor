@@ -12,10 +12,11 @@ import {
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
+import ScreenBackground from "../components/ScreenBackground";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../lib/useAuth";
 import { getHomeCity, getHomeMasjidId } from "../lib/homeMasjid";
-import { rootNavigate, goToHomeStackScreen } from "../lib/navigationRef";
+import { rootNavigate } from "../lib/navigationRef";
 import { useTheme } from "../lib/ThemeContext";
 import type { Theme } from "../theme";
 
@@ -213,34 +214,23 @@ export default function AccountScreen() {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <YourMasjidCard theme={theme} styles={styles} />
+    <ScreenBackground>
+      <ScrollView contentContainerStyle={styles.container}>
+        <YourMasjidCard theme={theme} styles={styles} />
 
-      <TouchableOpacity
-        style={[styles.card, styles.settingsCard]}
-        onPress={() => goToHomeStackScreen("Settings")}
-      >
-        <View style={styles.cardIconRow}>
-          <Ionicons name="settings-outline" size={18} color={theme.colors.accent} />
-          <Text style={styles.cardTitle}>Settings</Text>
-        </View>
-        <Text style={styles.cardSubtitle}>
-          Notifications, Adhan sound, and the app's dark/light theme.
-        </Text>
-      </TouchableOpacity>
-
-      {session && profile ? (
-        <ProfileView profile={profile} theme={theme} styles={styles} />
-      ) : (
-        <AuthForm theme={theme} styles={styles} />
-      )}
-    </ScrollView>
+        {session && profile ? (
+          <ProfileView profile={profile} theme={theme} styles={styles} />
+        ) : (
+          <AuthForm theme={theme} styles={styles} />
+        )}
+      </ScrollView>
+    </ScreenBackground>
   );
 }
 
 function makeStyles(theme: Theme) {
   return StyleSheet.create({
-    container: { padding: theme.spacing.md, backgroundColor: theme.colors.pageBg, flexGrow: 1 },
+    container: { padding: theme.spacing.md, backgroundColor: "transparent", flexGrow: 1 },
     center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: theme.colors.pageBg },
     card: {
       ...theme.cardShadow,
@@ -250,7 +240,6 @@ function makeStyles(theme: Theme) {
       marginBottom: theme.spacing.md,
       alignItems: "flex-start",
     },
-    settingsCard: { width: "100%" },
     cardIconRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 2 },
     cardTitle: { fontSize: 17, fontWeight: "700", color: theme.colors.textPrimary },
     cardSubtitle: { fontSize: 13, color: theme.colors.textMuted, marginTop: 4, marginBottom: 14 },

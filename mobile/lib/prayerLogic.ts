@@ -14,11 +14,23 @@ export function todayMonthDay(now = new Date()): { month: number; day: number } 
   return { month, day };
 }
 
-function parseTimeToday(time: string, base: Date): Date {
+export function parseTimeToday(time: string, base: Date): Date {
   const [h, m] = time.split(":").map(Number);
   const d = new Date(base);
   d.setHours(h, m, 0, 0);
   return d;
+}
+
+/** Has this prayer's Adhan time already happened today? Used to stop the
+ *  Today's Progress checklist from letting someone mark a prayer as prayed
+ *  before its time has even arrived. */
+export function hasPrayerTimeArrived(
+  today: PrayerTime,
+  key: keyof PrayerTime,
+  now = new Date()
+): boolean {
+  const t = parseTimeToday(today[key] as string, now);
+  return t.getTime() <= now.getTime();
 }
 
 export interface NextPrayer {
