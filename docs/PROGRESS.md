@@ -60,13 +60,23 @@ up correctly in the mobile app.
     always equals `qiblaBearing - heading`. Center hub and status text turn green with
     "You're facing Kaaba now" when aligned. (Intentionally skipped: a live map thumbnail
     and compass-skin picker — decorative/heavy, not core functionality.)
-  - **Qur'an**: list screen with a "Last Read" hero card (jumps back into whichever
-    Surah/Juz/Page you last opened), a Sura/Page/Juz underline-tab toggle, 8-point star
-    badges on Surah/Juz rows, and a 604-tile Page grid (each page fetched via AlQuran
-    Cloud's `/v1/page/{n}/{edition}`, grouped with surah-name headers). Surah/Juz/Page
-    readers all record "last read" + a daily open-count, and share a "Show translation"
-    switch instead of always displaying it. *(The user is sending a further reference
-    image for the Qur'an reader's look — not yet re-matched to that.)*
+  - **Qur'an list**: "Last Read" hero card (jumps back into whichever Surah/Juz/Page you
+    last opened), a **Bookmarks** row (long-press a chip to remove it), a Sura/Page/Juz
+    underline-tab toggle, 8-point star badges on Surah/Juz rows, and a 604-tile Page grid
+    (each page fetched via AlQuran Cloud's `/v1/page/{n}/{edition}`, grouped with
+    surah-name headers).
+  - **Qur'an reader** (Surah/Juz/Page detail): rebuilt as continuous, right-to-left
+    flowing **Mushaf-style** text (`components/MushafText.tsx`) — one wrapped paragraph
+    per surah segment with a small inline ﴿١﴾-style Arabic-Indic ayah marker, not boxed
+    per-ayah cards. A custom top bar (`QuranReaderTopBar`) replaces the native header:
+    back chevron, a context pill (Surah/Juz/Page number), a Home shortcut, and the
+    surah-name pill. A bottom toolbar (`QuranReaderToolbar`) has real, working buttons:
+    **Bookmark** (saves/removes this Surah/Juz/Page, shown in the list screen's
+    Bookmarks row), **Text size** (cycles Small/Medium/Large, persisted), **Translation**
+    (toggles a stacked translation block below the Arabic), and **Share** (native share
+    sheet with the Arabic text via `Share.share`). All record "last read" + a daily
+    open-count as before. *(Intentionally not built: audio recitation/"Play" and
+    "Auto-scroll" — no reciter audio is wired up yet, so no fake Play button.)*
   - **Tasbih**: tap-to-count dhikr counter — circular dial with a fill-progress ring,
     target chips (33/99/100), vibration + auto-reset + rounds-completed counter when the
     target is hit, persisted on-device.
@@ -132,10 +142,9 @@ Worth keeping in mind if something looks broken again:
 
 - User needs to add billing credits on console.anthropic.com for Ask AI to actually
   respond (see above — everything on our side is confirmed working).
-- **Qur'an reader redesign** — the user is sending a further reference image for how
-  the Surah/Juz/Page reading screen itself should look; revisit once received. The list
-  screen (Last Read, Sura/Page/Juz toggle, star badges) already matches their last
-  reference and hasn't changed in this round.
+- Qur'an audio recitation ("Play"/"Auto-scroll") is not built — would need a reciter
+  audio source wired up (AlQuran Cloud does offer per-ayah audio editions) plus an
+  audio player; worth adding later if the user wants it, but not faked in the meantime.
 - Qibla compass heading math is a reasonable first pass but should be checked for
   accuracy on a real device — magnetometer calibration/tilt-compensation varies by
   phone.

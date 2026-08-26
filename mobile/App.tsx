@@ -66,21 +66,9 @@ function HomeStackNavigator() {
       <HomeStack.Screen name="HomeMain" component={HomeScreen} options={{ headerShown: false }} />
       <HomeStack.Screen name="Qibla" component={QiblaScreen} options={{ title: "Qibla Direction" }} />
       <HomeStack.Screen name="QuranList" component={QuranScreen} options={{ title: "Qur'an" }} />
-      <HomeStack.Screen
-        name="SurahDetail"
-        component={SurahDetailScreen}
-        options={({ route }) => ({ title: route.params.englishName })}
-      />
-      <HomeStack.Screen
-        name="JuzDetail"
-        component={JuzDetailScreen}
-        options={({ route }) => ({ title: `Juz ${route.params.number}` })}
-      />
-      <HomeStack.Screen
-        name="PageDetail"
-        component={PageDetailScreen}
-        options={({ route }) => ({ title: `Page ${route.params.number}` })}
-      />
+      <HomeStack.Screen name="SurahDetail" component={SurahDetailScreen} options={{ headerShown: false }} />
+      <HomeStack.Screen name="JuzDetail" component={JuzDetailScreen} options={{ headerShown: false }} />
+      <HomeStack.Screen name="PageDetail" component={PageDetailScreen} options={{ headerShown: false }} />
       <HomeStack.Screen name="Hadith" component={HadithScreen} options={{ title: "Hadith" }} />
       <HomeStack.Screen name="Tasbih" component={TasbihScreen} options={{ title: "Tasbih" }} />
       <HomeStack.Screen name="Dua" component={DuaScreen} options={{ title: "Dua" }} />

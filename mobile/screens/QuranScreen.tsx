@@ -13,6 +13,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { HomeStackParamList } from "../App";
 import StarBadge from "../components/StarBadge";
 import { getLastRead, LastRead } from "../lib/quranProgress";
+import { Bookmark, getBookmarks, removeBookmark } from "../lib/quranBookmarks";
 import { useTheme } from "../lib/ThemeContext";
 import type { Theme } from "../theme";
 
@@ -37,6 +38,7 @@ export default function QuranScreen() {
   const [mode, setMode] = useState<Mode>("surah");
   const [surahs, setSurahs] = useState<Surah[]>([]);
   const [lastRead, setLastRead] = useState<LastRead | null>(null);
+  const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigation = useNavigation<Nav>();
@@ -52,24 +54,29 @@ export default function QuranScreen() {
   useFocusEffect(
     useCallback(() => {
       getLastRead().then(setLastRead);
+      getBookmarks().then(setBookmarks);
     }, [])
   );
 
-  function openLastRead() {
-    if (!lastRead) return;
-    if (lastRead.type === "surah") {
-      navigation.navigate("SurahDetail", { number: lastRead.number, englishName: lastRead.label });
-    } else if (lastRead.type === "juz") {
-      navigation.navigate("JuzDetail", { number: lastRead.number });
+  function openReader(entry: { type: LastRead["type"]; number: number; label: string }) {
+    if (entry.type === "surah") {
+      navigation.navigate("SurahDetail", { number: entry.number, englishName: entry.label });
+    } else if (entry.type === "juz") {
+      navigation.navigate("JuzDetail", { number: entry.number });
     } else {
-      navigation.navigate("PageDetail", { number: lastRead.number });
+      navigation.navigate("PageDetail", { number: entry.number });
     }
+  }
+
+  async function handleRemoveBookmark(b: Bookmark) {
+    await removeBookmark(b.type, b.number);
+    setBookmarks(await getBookmarks());
   }
 
   return (
     <View style={styles.page}>
       {lastRead && (
-        <TouchableOpacity style={[styles.lastReadCard, theme.cardShadow]} onPress={openLastRead}>
+        <TouchableOpacity style={[styles.lastReadCard, theme.cardShadow]} onPress={() => openReader(lastRead)}>
           <StarBadge number={lastRead.number} size={40} />
           <View style={{ flex: 1, marginLeft: 12 }}>
             <Text style={styles.lastReadLabel}>Last Read</Text>
@@ -77,6 +84,29 @@ export default function QuranScreen() {
           </View>
           <Ionicons name="book-outline" size={22} color={theme.colors.accent} style={{ opacity: 0.6 }} />
         </TouchableOpacity>
+      )}
+
+      {bookmarks.length > 0 && (
+        <View style={styles.bookmarksSection}>
+          <Text style={styles.bookmarksHeader}>Bookmarks</Text>
+          <FlatList
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            data={bookmarks}
+            keyExtractor={(b) => `${b.type}-${b.number}`}
+            contentContainerStyle={styles.bookmarksRow}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={[styles.bookmarkChip, theme.cardShadow]}
+                onPress={() => openReader(item)}
+                onLongPress={() => handleRemoveBookmark(item)}
+              >
+                <Ionicons name="bookmark" size={13} color={theme.colors.accent} />
+                <Text style={styles.bookmarkChipText} numberOfLines={1}>{item.label}</Text>
+              </TouchableOpacity>
+            )}
+          />
+        </View>
       )}
 
       <View style={styles.toggleRow}>
@@ -183,6 +213,26 @@ function makeStyles(theme: Theme) {
     },
     lastReadLabel: { fontSize: 11, color: theme.colors.textMuted, fontWeight: "700" },
     lastReadTitle: { fontSize: 17, fontWeight: "800", color: theme.colors.textPrimary, marginTop: 2 },
+    bookmarksSection: { marginTop: theme.spacing.md },
+    bookmarksHeader: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: theme.colors.textMuted,
+      marginLeft: theme.spacing.md,
+      marginBottom: 8,
+    },
+    bookmarksRow: { paddingHorizontal: theme.spacing.md, gap: 8 },
+    bookmarkChip: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      backgroundColor: theme.colors.cardBg,
+      borderRadius: theme.radius.pill,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      maxWidth: 160,
+    },
+    bookmarkChipText: { fontSize: 12, fontWeight: "700", color: theme.colors.textPrimary },
     toggleRow: {
       flexDirection: "row",
       paddingHorizontal: theme.spacing.md,

@@ -1,11 +1,21 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from "react-native";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { ActivityIndicator, ScrollView, Share, StyleSheet, Text, View } from "react-native";
 import type { RouteProp } from "@react-navigation/native";
-import { useRoute } from "@react-navigation/native";
+import { useFocusEffect, useRoute } from "@react-navigation/native";
 import type { HomeStackParamList } from "../App";
-import AyahCard from "../components/AyahCard";
-import TranslationToggleBar from "../components/TranslationToggleBar";
+import MushafText from "../components/MushafText";
+import QuranReaderTopBar from "../components/QuranReaderTopBar";
+import QuranReaderToolbar from "../components/QuranReaderToolbar";
 import { saveLastRead } from "../lib/quranProgress";
+import { isBookmarked, toggleBookmark } from "../lib/quranBookmarks";
+import {
+  arabicFontSizeFor,
+  arabicLineHeightFor,
+  getTextSize,
+  nextTextSize,
+  setTextSize,
+  TextSize,
+} from "../lib/quranTextSize";
 import { useTheme } from "../lib/ThemeContext";
 import type { Theme } from "../theme";
 
@@ -22,12 +32,16 @@ export default function SurahDetailScreen() {
   const { params } = useRoute<SurahRoute>();
   const [arabic, setArabic] = useState<Ayah[]>([]);
   const [translation, setTranslation] = useState<Ayah[]>([]);
-  const [showTranslation, setShowTranslation] = useState(true);
+  const [showTranslation, setShowTranslation] = useState(false);
+  const [textSize, setTextSizeState] = useState<TextSize>("medium");
+  const [bookmarked, setBookmarked] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     saveLastRead({ type: "surah", number: params.number, label: params.englishName });
+    getTextSize().then(setTextSizeState);
+    isBookmarked("surah", params.number).then(setBookmarked);
 
     Promise.all([
       fetch(`https://api.alquran.cloud/v1/surah/${params.number}`).then((r) => r.json()),
@@ -42,6 +56,28 @@ export default function SurahDetailScreen() {
       .catch(() => setError("Couldn't load this surah. Check your connection."))
       .finally(() => setLoading(false));
   }, [params.number]);
+
+  useFocusEffect(
+    useCallback(() => {
+      isBookmarked("surah", params.number).then(setBookmarked);
+    }, [params.number])
+  );
+
+  async function handleToggleBookmark() {
+    const now = await toggleBookmark({ type: "surah", number: params.number, label: params.englishName });
+    setBookmarked(now);
+  }
+
+  async function handleCycleTextSize() {
+    const next = nextTextSize(textSize);
+    setTextSizeState(next);
+    await setTextSize(next);
+  }
+
+  async function handleShare() {
+    const body = arabic.map((a) => a.text).join(" ");
+    await Share.share({ message: `${params.englishName}\n\n${body}\n\n— shared from Noor` });
+  }
 
   if (loading) {
     return (
@@ -61,19 +97,32 @@ export default function SurahDetailScreen() {
 
   return (
     <View style={styles.page}>
-      <TranslationToggleBar value={showTranslation} onValueChange={setShowTranslation} />
-      <FlatList
-        data={arabic}
-        keyExtractor={(a) => String(a.numberInSurah)}
-        contentContainerStyle={styles.listContent}
-        renderItem={({ item, index }) => (
-          <AyahCard
-            number={item.numberInSurah}
-            arabicText={item.text}
-            translationText={translation[index]?.text}
-            showTranslation={showTranslation}
-          />
+      <QuranReaderTopBar leftLabel={`Surah ${params.number}`} rightLabel={params.englishName} />
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <MushafText
+          ayahs={arabic.map((a) => ({ number: a.numberInSurah, text: a.text }))}
+          fontSize={arabicFontSizeFor(textSize)}
+          lineHeight={arabicLineHeightFor(textSize)}
+        />
+        {showTranslation && (
+          <View style={styles.translationBlock}>
+            {arabic.map((a, i) => (
+              <View key={i} style={styles.translationRow}>
+                <Text style={styles.translationNumber}>{a.numberInSurah}.</Text>
+                <Text style={styles.translationText}>{translation[i]?.text}</Text>
+              </View>
+            ))}
+          </View>
         )}
+      </ScrollView>
+      <QuranReaderToolbar
+        bookmarked={bookmarked}
+        onToggleBookmark={handleToggleBookmark}
+        onShare={handleShare}
+        showTranslation={showTranslation}
+        onToggleTranslation={() => setShowTranslation((v) => !v)}
+        textSizeLabel={textSize[0].toUpperCase() + textSize.slice(1)}
+        onCycleTextSize={handleCycleTextSize}
       />
     </View>
   );
@@ -84,6 +133,16 @@ function makeStyles(theme: Theme) {
     page: { flex: 1, backgroundColor: theme.colors.pageBg },
     center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24, backgroundColor: theme.colors.pageBg },
     muted: { color: theme.colors.textMuted, textAlign: "center" },
-    listContent: { padding: theme.spacing.md },
+    scrollContent: { padding: theme.spacing.lg },
+    translationBlock: {
+      marginTop: theme.spacing.lg,
+      paddingTop: theme.spacing.md,
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.border,
+      gap: 10,
+    },
+    translationRow: { flexDirection: "row", gap: 8 },
+    translationNumber: { fontSize: 12, fontWeight: "700", color: theme.colors.accent, width: 20 },
+    translationText: { flex: 1, fontSize: 13, color: theme.colors.textMuted, lineHeight: 20 },
   });
 }
