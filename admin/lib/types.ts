@@ -4,6 +4,9 @@ export interface Profile {
   id: string;
   full_name: string | null;
   avatar_url: string | null;
+  phone: string | null;
+  city: string | null;
+  gender: "male" | "female" | null;
   role: UserRole;
   created_at: string;
 }

@@ -17,8 +17,11 @@ import { supabase } from "../lib/supabase";
 import { useAuth } from "../lib/useAuth";
 import { getHomeCity, getHomeMasjidId } from "../lib/homeMasjid";
 import { rootNavigate } from "../lib/navigationRef";
+import { isValidPhone, normalizePhone, phoneToSyntheticEmail } from "../lib/phoneAuth";
 import { useTheme } from "../lib/ThemeContext";
 import type { Theme } from "../theme";
+
+type Gender = "male" | "female";
 
 function YourMasjidCard({ theme, styles }: { theme: Theme; styles: ReturnType<typeof makeStyles> }) {
   const [loading, setLoading] = useState(true);
@@ -77,28 +80,61 @@ function YourMasjidCard({ theme, styles }: { theme: Theme; styles: ReturnType<ty
 function AuthForm({ theme, styles }: { theme: Theme; styles: ReturnType<typeof makeStyles> }) {
   const [mode, setMode] = useState<"signIn" | "signUp">("signIn");
   const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [city, setCity] = useState("");
+  const [gender, setGender] = useState<Gender | null>(null);
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function submit() {
-    setLoading(true);
     setError(null);
     setNotice(null);
 
+    if (!isValidPhone(phone)) {
+      setError("Enter a valid phone number.");
+      return;
+    }
+    if (mode === "signUp" && (!fullName.trim() || !gender)) {
+      setError("Full name and gender are required.");
+      return;
+    }
+
+    setLoading(true);
+    const syntheticEmail = phoneToSyntheticEmail(phone);
+
     if (mode === "signIn") {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) setError(error.message);
+      const { error } = await supabase.auth.signInWithPassword({ email: syntheticEmail, password });
+      if (error) setError("Couldn't sign in — check your phone number and password.");
     } else {
-      const { error } = await supabase.auth.signUp({
-        email,
+      const { data, error } = await supabase.auth.signUp({
+        email: syntheticEmail,
         password,
-        options: { data: { full_name: fullName } },
+        options: {
+          data: {
+            full_name: fullName.trim(),
+            phone: normalizePhone(phone),
+            city: city.trim() || null,
+            gender,
+          },
+        },
       });
-      if (error) setError(error.message);
-      else setNotice("Account created! Check your email to confirm, then sign in.");
+      if (error) {
+        setError(
+          error.message.includes("already registered")
+            ? "That phone number is already registered — try signing in instead."
+            : error.message
+        );
+      } else if (data.session) {
+        setNotice("Account created — you're signed in.");
+      } else {
+        // Supabase's "Confirm email" setting is still on; since there's no real
+        // email behind a phone sign-up, that has to be turned off in the
+        // Supabase Dashboard (Authentication → Sign In / Providers → Email)
+        // for phone accounts to be usable right after signing up.
+        setNotice("Account created, but sign-in is pending email confirmation — ask the app admin to turn that off for phone accounts.");
+      }
     }
     setLoading(false);
   }
@@ -123,14 +159,38 @@ function AuthForm({ theme, styles }: { theme: Theme; styles: ReturnType<typeof m
           />
         )}
         <TextInput
-          placeholder="Email"
+          placeholder="Phone number"
           placeholderTextColor={theme.colors.textMuted}
           autoCapitalize="none"
-          keyboardType="email-address"
-          value={email}
-          onChangeText={setEmail}
+          keyboardType="phone-pad"
+          value={phone}
+          onChangeText={setPhone}
           style={styles.input}
         />
+        {mode === "signUp" && (
+          <TextInput
+            placeholder="City / District"
+            placeholderTextColor={theme.colors.textMuted}
+            value={city}
+            onChangeText={setCity}
+            style={styles.input}
+          />
+        )}
+        {mode === "signUp" && (
+          <View style={styles.genderRow}>
+            {(["male", "female"] as Gender[]).map((g) => (
+              <TouchableOpacity
+                key={g}
+                style={[styles.genderChip, gender === g && styles.genderChipActive]}
+                onPress={() => setGender(g)}
+              >
+                <Text style={[styles.genderChipText, gender === g && styles.genderChipTextActive]}>
+                  {g === "male" ? "Male" : "Female"}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
         <TextInput
           placeholder="Password"
           placeholderTextColor={theme.colors.textMuted}
@@ -173,7 +233,7 @@ function ProfileView({
   theme,
   styles,
 }: {
-  profile: { full_name: string | null };
+  profile: { full_name: string | null; phone: string | null; city: string | null };
   theme: Theme;
   styles: ReturnType<typeof makeStyles>;
 }) {
@@ -190,6 +250,11 @@ function ProfileView({
           </Text>
         </View>
         <Text style={styles.cardTitle}>{profile.full_name ?? "Assalamu alaikum"}</Text>
+        {(profile.phone || profile.city) && (
+          <Text style={styles.cardSubtitle}>
+            {[profile.phone, profile.city].filter(Boolean).join(" — ")}
+          </Text>
+        )}
       </View>
 
       <TouchableOpacity style={styles.signOutButton} onPress={signOut}>
@@ -265,6 +330,19 @@ function makeStyles(theme: Theme) {
       backgroundColor: theme.colors.pageBg,
       color: theme.colors.textPrimary,
     },
+    genderRow: { flexDirection: "row", gap: 10, marginBottom: 10, width: "100%" },
+    genderChip: {
+      flex: 1,
+      alignItems: "center",
+      paddingVertical: 12,
+      borderRadius: theme.radius.md,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.pageBg,
+    },
+    genderChipActive: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
+    genderChipText: { fontSize: 14, fontWeight: "700", color: theme.colors.textMuted },
+    genderChipTextActive: { color: "white" },
     error: { color: theme.colors.danger, fontSize: 13, marginBottom: 10 },
     notice: { color: theme.colors.accent, fontSize: 13, marginBottom: 10 },
     primaryButton: {

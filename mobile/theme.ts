@@ -132,6 +132,13 @@ const lightShadow = {
   elevation: 2,
 };
 
+// Amiri — a classical Naskh revival typeface, chosen for how much more legible
+// it is for Quranic/Arabic text than the system default. Loaded via expo-font
+// in App.tsx (assets/fonts/Amiri-*.ttf, OFL-licensed). Used for every block of
+// Arabic in the app (Qur'an reader, Dua/Kalima text, Ayah of the Day).
+export const ARABIC_FONT_REGULAR = "Amiri-Regular";
+export const ARABIC_FONT_BOLD = "Amiri-Bold";
+
 export function getTheme(mode: "light" | "dark"): Theme {
   return {
     mode,

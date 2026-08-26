@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { StyleSheet, Text } from "react-native";
 import { toArabicIndicDigits } from "../lib/arabicNumerals";
 import { useTheme } from "../lib/ThemeContext";
+import { ARABIC_FONT_BOLD, ARABIC_FONT_REGULAR } from "../theme";
 import type { Theme } from "../theme";
 
 export interface MushafAyah {
@@ -46,11 +47,12 @@ function makeStyles(theme: Theme) {
       textAlign: "right",
       writingDirection: "rtl",
       color: theme.colors.textPrimary,
+      fontFamily: ARABIC_FONT_REGULAR,
     },
     ayahText: { color: theme.colors.textPrimary },
     marker: {
       color: theme.colors.accent,
-      fontWeight: "700",
+      fontFamily: ARABIC_FONT_BOLD,
     },
   });
 }

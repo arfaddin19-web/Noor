@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import ScreenBackground from "../components/ScreenBackground";
 import { DUA_CATEGORIES, DuaEntry } from "../lib/duaData";
 import { useTheme } from "../lib/ThemeContext";
+import { ARABIC_FONT_REGULAR } from "../theme";
 import type { Theme } from "../theme";
 
 function allCollapsed(): Record<string, boolean> {
@@ -89,11 +90,13 @@ function makeStyles(theme: Theme) {
     },
     title: { fontSize: 13, fontWeight: "700", color: theme.colors.accent, marginBottom: 10 },
     arabic: {
-      fontSize: 21,
+      fontSize: 22,
       textAlign: "right",
-      lineHeight: 36,
+      writingDirection: "rtl",
+      lineHeight: 40,
       color: theme.colors.textPrimary,
       marginBottom: 10,
+      fontFamily: ARABIC_FONT_REGULAR,
     },
     transliteration: {
       fontSize: 13,

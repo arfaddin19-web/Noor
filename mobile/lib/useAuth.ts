@@ -5,6 +5,9 @@ import { supabase } from "./supabase";
 interface Profile {
   id: string;
   full_name: string | null;
+  phone: string | null;
+  city: string | null;
+  gender: "male" | "female" | null;
   role: "user" | "admin";
 }
 
@@ -31,7 +34,7 @@ export function useAuth(): AuthState {
       }
       const { data: profile } = await supabase
         .from("profiles")
-        .select("id, full_name, role")
+        .select("id, full_name, phone, city, gender, role")
         .eq("id", session.user.id)
         .single();
       if (mounted) {

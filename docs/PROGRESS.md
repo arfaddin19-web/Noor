@@ -8,13 +8,14 @@ up correctly in the mobile app.
 
 ## Done
 
-- **Supabase schema** (`supabase/migrations/0001`–`0010`): profiles (role-based),
-  locations, prayer_times (national Adhan times), masjids (Jamat times + city/district),
-  halal_food_places, ai_qa_history, app_settings, **notices** (admin announcements,
-  0008), **community_orgs** (masjid-affiliated social-work contacts, 0010) — with RLS
-  (public read, admin write) **and** explicit grants for `anon`/`authenticated` (0006 —
-  see the note below, this was the cause of a real "permission denied" bug).
-  `0009_fix_pm_times.sql` corrects a real data bug — see below.
+- **Supabase schema** (`supabase/migrations/0001`–`0011`): profiles (role-based, now
+  with phone/city/gender — 0011), locations, prayer_times (national Adhan times),
+  masjids (Jamat times + city/district), halal_food_places, ai_qa_history, app_settings,
+  **notices** (admin announcements, 0008), **community_orgs** (masjid-affiliated
+  social-work contacts, 0010) — with RLS (public read, admin write) **and** explicit
+  grants for `anon`/`authenticated` (0006 — see the note below, this was the cause of a
+  real "permission denied" bug). `0009_fix_pm_times.sql` corrects a real data bug — see
+  below.
 - **Prayer time data**: transcribed from the IQRA Tutorial Hub calendar PDF, seeded as
   a single nationwide **Nepal** location (366 rows = 365 days + Feb 29).
 - **Adhan vs. Jamat**: `prayer_times` holds the national Adhan (start) times; each
@@ -28,11 +29,13 @@ up correctly in the mobile app.
   prayer. Stored on-device (AsyncStorage), skippable, changeable anytime — falls back
   to the generic nationwide Adhan display when unset.
 - **Admin dashboard** (Next.js 16 / React 19, `/admin`): email/password login gated to
-  admins, overview stats, prayer times (Adhan) editor, masjids CRUD (incl. city) with
-  approve/reject and inline Jamat time editing, halal food CRUD with approve/reject,
-  **Community Help** (masjid-affiliated social-work orgs: name, city, contact person,
-  designation, phone), **Notices** (publish/hide short announcements shown on the app's
-  Home screen), **Donation** (edit the bank/eSewa/Khalti details shown on the app's
+  admins, overview stats **now including registered-user count, a gender breakdown, and
+  top cities** (self-reported at mobile sign-up — see Account below), prayer times
+  (Adhan) editor, masjids CRUD (incl. city) with approve/reject and inline Jamat time
+  editing, halal food CRUD with approve/reject, **Community Help** (masjid-affiliated
+  social-work orgs: name, city, contact person, designation, phone), **Notices**
+  (publish/hide short announcements shown on the app's Home screen), **Donation** (edit
+  the bank/eSewa/Khalti details shown on the app's
   Donate screen), AI Q&A log viewer with flagging. `npm run build` verified clean.
 - **Mobile app** (Expo SDK 54 / React Native 0.81, `/mobile`) — redesigned to match
   user-supplied reference mockups. Theming and iconography had a full pass:
@@ -44,6 +47,13 @@ up correctly in the mobile app.
   - **Icons**: every emoji glyph in a button, grid tile, or header (🧭📍📞✅🕌🍽️🔔▾ etc.)
     was replaced with `@expo/vector-icons` (Ionicons/MaterialCommunityIcons) for a
     consistent, non-"cartoon" look.
+  - **Arabic font**: every block of Arabic text (Qur'an reader, Dua/Kalima text, Ayah
+    of the Day) now renders in **Amiri** — a classical Naskh revival typeface (OFL-
+    licensed, bundled in `assets/fonts/`, loaded via `expo-font`) — instead of the
+    system default, for real legibility. *Interim choice* — the user is sending a
+    specific reference image for the exact font they want; swap it in once that
+    arrives, the font is used from one place (`theme.ts`'s `ARABIC_FONT_REGULAR`/`_BOLD`)
+    so changing it later is a one-file edit.
   - **Onboarding**: 3-slide intro (dark sky gradient + a dependency-free View-based
     mosque skyline), shown once, then the masjid picker above.
   - **Home**: emerald gradient hero with a personalized greeting ("Assalamu alaikum,
@@ -108,17 +118,30 @@ up correctly in the mobile app.
     manual, not a hadith collection, besides), so nothing was fabricated to fill them in.
     Hindi/Nepali translations aren't published by any free hadith source we could find
     either — Urdu is offered as the closest available alternate-language reading.
+  - **Hadith of the Day** (new): a curated, offline list of 24 short, accurately-sourced
+    hadith (mostly Bukhari/Muslim), picked deterministically by day-of-year. Shown as a
+    card on Home, and — the actual point of it — an optional **daily notification** at
+    8am with that day's hadith text embedded directly in it, so it's readable straight
+    from the lock screen with no need to open the app (toggle in Settings). Local
+    notifications can't fetch anything at delivery time, so the next 14 days' worth are
+    pre-scheduled with their text baked in, alongside (not instead of) prayer
+    notifications — the two are tagged separately so toggling one never cancels the
+    other.
   - **Donate**: shows a support message plus whichever of bank/account/eSewa/Khalti
     details the admin has filled in (`app_settings.donation_info`); values are
     press-and-hold to copy. Hides rows the admin left blank.
-  - **Islamic Calendar** (new): two tabs. **Events** lists Islamic New Year, Ashura,
-    Mawlid, Isra & Mi'raj, start of Ramadan, Laylatul Qadr, Eid al-Fitr, start of Dhu
-    al-Hijjah, Day of Arafah, and Eid al-Adha for the current Hijri year, each with an
-    "in N days" badge, computed entirely offline. **Ramadan** shows a real Sehri-ends /
-    Iftar table for every day of the current or next Ramadan, sourced from the actual
-    `prayer_times` data (Fajr/Maghrib) rather than separate content. Both tabs carry a
-    visible caveat that these are tabular-calendar estimates — actual Ramadan/Eid dates
-    depend on local moon sighting and can shift by a day.
+  - **Islamic Calendar** (new): a real month-view **calendar grid**
+    (`components/CalendarGrid.tsx`) sits at the top — Gregorian dates with the Hijri
+    day-of-month underneath each, today highlighted, a dot on any date with an Islamic
+    event, and ‹ › month navigation — above two tabs. **Events** lists Islamic New Year,
+    Ashura, Mawlid, Isra & Mi'raj, start of Ramadan, Laylatul Qadr, Eid al-Fitr, start of
+    Dhu al-Hijjah, Day of Arafah, and Eid al-Adha for the current Hijri year, each with
+    an "in N days" badge, computed entirely offline. **Ramadan** shows a real
+    Sehri-ends / Iftar table for every day of the current or next Ramadan, sourced from
+    the actual `prayer_times` data (Fajr/Maghrib) rather than separate content. Both
+    the grid and the tabs carry a visible caveat that these are tabular-calendar
+    estimates — actual Ramadan/Eid dates depend on local moon sighting and can shift by
+    a day.
   - **Community Help** (new, the user's "Volunteers" idea, renamed): a directory of
     masjid-affiliated social-work organizations — name, city, contact person,
     designation, phone — with a city search bar, for someone new to a city or in
@@ -137,8 +160,15 @@ up correctly in the mobile app.
     Maps.
   - **Ask**: AI Q&A chat UI wired to and verified working against the deployed
     `ask-ai` Supabase Edge Function (see below).
-  - **Account**: "Your Masjid" picker, Supabase email/password sign up & sign in,
-    profile, sign out.
+  - **Account**: sign-up is now **phone-number-based** — full name, phone, city,
+    gender, and a password, instead of an email. Supabase's email/password auth is
+    reused underneath via a synthetic `{phone}@noor.local` address (no real email is
+    sent or needed), so the phone number itself becomes the account identifier. *Not
+    SMS-verified* — no OTP/SMS provider is configured (that's a paid Supabase
+    integration), so this trades phone verification for working today at no cost; real
+    verification could be added later if it's worth the per-message cost. City/gender
+    feed the admin dashboard's new population stats. Plus "Your Masjid" picker, profile,
+    sign out.
   - Navigation is now **4 bottom tabs — Home / Ask / Settings / Account** — with
     everything else (Qibla, Qur'an, Books & Hadith, Tasbih, Dua, Donate, Islamic
     Calendar, Community Help, Masjids, Halal Food) reached via Home's icon grid/stack.
@@ -218,13 +248,24 @@ Worth keeping in mind if something looks broken again:
 
 - User needs to add billing credits on console.anthropic.com for Ask AI to actually
   respond (see above — everything on our side is confirmed working).
-- **Sign-up is email/password only** — no Google or other social sign-in is wired up.
-  New accounts require clicking a confirmation link Supabase emails via its own
-  built-in (very rate-limited, sometimes-unreliable) sender; if that email never
-  arrives, the fix is in the Supabase Dashboard, not the code — see the reply this was
-  raised in for exact steps (turn off "Confirm email," or configure custom SMTP).
-  Google Sign-In could be added later if wanted (needs a Google Cloud OAuth client +
-  Supabase provider config + deep-link handling in Expo).
+- **Sign-up is phone-number-based but not SMS-verified** — anyone can type any number;
+  real verification needs a paid SMS/OTP provider wired into Supabase's native phone
+  auth, which costs per message and needs the user to sign up for one (e.g. Twilio).
+  Worth doing if the population data needs to be trustworthy, not just self-reported.
+  No Google or other social sign-in is wired up either; could be added later.
+- If the Supabase project still has "Confirm email" turned on (Authentication → Sign
+  In / Providers → Email in the Supabase Dashboard), new phone accounts will be created
+  but can't sign in until that's turned off — there's no real email behind a phone
+  sign-up for a confirmation link to go to.
+- **Waiting on the user for two things**: (1) the reference image for the exact Arabic
+  font they want (Amiri is used as a solid interim choice — see above); (2) the full
+  English PDFs of Muntakhab Ahadith and Bahishti Zewar, to add as new Books & Hadith
+  entries. For (2): Nepali/Hindi translations of that text could be drafted using
+  Claude, but that's machine translation of religious/fiqh content — it should be
+  reviewed by a qualified Nepali/Hindi-speaking scholar before being shown to users as
+  authoritative, especially for Bahishti Zewar (a fiqh manual, where precision in
+  rulings matters a lot). Scope/timeline depends on the PDFs' length and formatting
+  once they arrive.
 - Ramadan Timetable / Islamic Calendar dates are computed from a standard tabular
   Hijri calendar, not moon sighting — every screen using them says so, but they should
   still be treated as estimates, not an authoritative Ramadan/Eid announcement.

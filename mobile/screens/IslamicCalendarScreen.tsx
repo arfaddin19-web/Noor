@@ -2,10 +2,11 @@ import React, { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import ScreenBackground from "../components/ScreenBackground";
+import CalendarGrid from "../components/CalendarGrid";
 import { supabase } from "../lib/supabase";
 import { PrayerTime, Location } from "../lib/types";
 import { todayMonthDay } from "../lib/prayerLogic";
-import { gregorianToHijri, HIJRI_MONTHS } from "../lib/hijri";
+import { gregorianToHijri } from "../lib/hijri";
 import { getIslamicEvents, getRamadanRange, getRelevantRamadanYear, IslamicEvent } from "../lib/islamicEvents";
 import { useTheme } from "../lib/ThemeContext";
 import type { Theme } from "../theme";
@@ -94,10 +95,9 @@ export default function IslamicCalendarScreen() {
 
   return (
     <ScreenBackground>
+      <CalendarGrid />
+
       <View style={styles.headerCard}>
-        <Text style={styles.headerTitle}>
-          {HIJRI_MONTHS[currentHijri.month - 1]} {currentHijri.year} AH
-        </Text>
         <Text style={styles.headerCaveat}>
           Dates use a standard tabular calendar and are estimates — your local masjid's
           moon-sighting announcement may shift Ramadan, Eid, or other dates by a day.
@@ -207,7 +207,6 @@ function makeStyles(theme: Theme) {
       borderRadius: theme.radius.lg,
       padding: theme.spacing.md,
     },
-    headerTitle: { fontSize: 18, fontWeight: "800", color: theme.colors.textPrimary },
     headerCaveat: { fontSize: 11, color: theme.colors.textMuted, marginTop: 6, lineHeight: 16 },
     tabRow: {
       flexDirection: "row",

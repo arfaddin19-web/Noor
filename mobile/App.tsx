@@ -7,6 +7,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { useFonts } from "expo-font";
 
 import OnboardingScreen from "./screens/OnboardingScreen";
 import MasjidSetupScreen from "./screens/MasjidSetupScreen";
@@ -191,6 +192,10 @@ function AppInner() {
   const theme = useTheme();
   const [ready, setReady] = useState(false);
   const [initialRoute, setInitialRoute] = useState<keyof RootStackParamList>("Main");
+  const [fontsLoaded] = useFonts({
+    "Amiri-Regular": require("./assets/fonts/Amiri-Regular.ttf"),
+    "Amiri-Bold": require("./assets/fonts/Amiri-Bold.ttf"),
+  });
 
   useEffect(() => {
     setupAndroidNotificationChannel();
@@ -206,7 +211,7 @@ function AppInner() {
     })();
   }, []);
 
-  if (!ready) {
+  if (!ready || !fontsLoaded) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: theme.colors.pageBg }}>
         <ActivityIndicator color={theme.colors.accent} />

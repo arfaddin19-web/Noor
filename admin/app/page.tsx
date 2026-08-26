@@ -14,28 +14,56 @@ function StatCard({ label, value }: { label: string; value: number | string }) {
   );
 }
 
+interface CityCount {
+  city: string;
+  count: number;
+}
+
 function Overview() {
   const [counts, setCounts] = useState<Record<string, number | string>>({
     masjids: "…",
     halalFood: "…",
     aiQuestions: "…",
     locations: "…",
+    users: "…",
   });
+  const [genderCounts, setGenderCounts] = useState({ male: 0, female: 0, unspecified: 0 });
+  const [topCities, setTopCities] = useState<CityCount[]>([]);
 
   useEffect(() => {
     async function load() {
-      const [masjids, halalFood, aiQuestions, locations] = await Promise.all([
+      const [masjids, halalFood, aiQuestions, locations, users, profiles] = await Promise.all([
         supabase.from("masjids").select("*", { count: "exact", head: true }),
         supabase.from("halal_food_places").select("*", { count: "exact", head: true }),
         supabase.from("ai_qa_history").select("*", { count: "exact", head: true }),
         supabase.from("locations").select("*", { count: "exact", head: true }),
+        supabase.from("profiles").select("*", { count: "exact", head: true }),
+        supabase.from("profiles").select("city, gender"),
       ]);
       setCounts({
         masjids: masjids.count ?? 0,
         halalFood: halalFood.count ?? 0,
         aiQuestions: aiQuestions.count ?? 0,
         locations: locations.count ?? 0,
+        users: users.count ?? 0,
       });
+
+      const rows = (profiles.data as { city: string | null; gender: string | null }[]) ?? [];
+      let male = 0, female = 0, unspecified = 0;
+      const cityMap = new Map<string, number>();
+      for (const r of rows) {
+        if (r.gender === "male") male++;
+        else if (r.gender === "female") female++;
+        else unspecified++;
+        if (r.city) cityMap.set(r.city, (cityMap.get(r.city) ?? 0) + 1);
+      }
+      setGenderCounts({ male, female, unspecified });
+      setTopCities(
+        Array.from(cityMap.entries())
+          .map(([city, count]) => ({ city, count }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 8)
+      );
     }
     load();
   }, []);
@@ -44,11 +72,45 @@ function Overview() {
     <div>
       <h1 className="mb-1 text-2xl font-semibold">Overview</h1>
       <p className="mb-6 text-gray-500">Content at a glance.</p>
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
+        <StatCard label="Registered users" value={counts.users} />
         <StatCard label="Locations" value={counts.locations} />
         <StatCard label="Masjids" value={counts.masjids} />
         <StatCard label="Halal food places" value={counts.halalFood} />
         <StatCard label="AI questions asked" value={counts.aiQuestions} />
+      </div>
+
+      <h2 className="mb-3 mt-8 text-lg font-semibold">Community (from sign-ups)</h2>
+      <p className="mb-4 text-sm text-gray-500">
+        Collected at sign-up — self-reported, not verified. Only from users who created an
+        account (most masjid/prayer-time features work without one).
+      </p>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="rounded-xl border border-gray-200 bg-white p-5">
+          <p className="mb-3 text-sm text-gray-500">By gender</p>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between"><span>Male</span><span className="font-medium">{genderCounts.male}</span></div>
+            <div className="flex justify-between"><span>Female</span><span className="font-medium">{genderCounts.female}</span></div>
+            {genderCounts.unspecified > 0 && (
+              <div className="flex justify-between text-gray-400"><span>Unspecified</span><span>{genderCounts.unspecified}</span></div>
+            )}
+          </div>
+        </div>
+        <div className="rounded-xl border border-gray-200 bg-white p-5">
+          <p className="mb-3 text-sm text-gray-500">Top cities</p>
+          {topCities.length === 0 ? (
+            <p className="text-sm text-gray-400">No city data yet.</p>
+          ) : (
+            <div className="space-y-2 text-sm">
+              {topCities.map((c) => (
+                <div key={c.city} className="flex justify-between">
+                  <span>{c.city}</span>
+                  <span className="font-medium">{c.count}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

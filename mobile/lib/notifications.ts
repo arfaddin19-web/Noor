@@ -4,10 +4,14 @@ import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import { supabase } from "./supabase";
 import { Location, PrayerTime, PRAYER_LABELS } from "./types";
+import { getHadithForDate } from "./hadithOfDay";
 
 const STORAGE_KEY = "noor.notificationsEnabled";
 const SOUND_KEY = "noor.adhanSoundEnabled";
+const HADITH_STORAGE_KEY = "noor.hadithNotificationsEnabled";
 const DAYS_AHEAD = 7;
+const HADITH_DAYS_AHEAD = 14;
+const HADITH_NOTIFICATION_HOUR = 8; // 8:00am local time
 
 Notifications.setNotificationHandler({
   handleNotification: async () => {
@@ -30,13 +34,23 @@ async function getAdhanSoundEnabled(): Promise<boolean> {
   return v !== "false"; // default on
 }
 
+/** Prayer and Hadith-of-the-Day notifications are scheduled independently, so
+ *  cancelling/rescheduling one type must never wipe out the other — every
+ *  notification this module schedules is tagged with `data.noorType`, and
+ *  this only cancels the ones matching `type`. */
+async function cancelNotificationsOfType(type: "prayer" | "hadith"): Promise<void> {
+  const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+  const toCancel = scheduled.filter((n) => n.content.data?.noorType === type);
+  await Promise.all(toCancel.map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier)));
+}
+
 /** Schedules a local notification for each remaining Fajr/Dhuhr/Asr/Maghrib/Isha
  *  Adhan over the next `DAYS_AHEAD` days at the default location. Cancels any
  *  previously scheduled prayer notifications first, so this is safe to call
  *  repeatedly (e.g. once per app open, or when the sound preference changes)
  *  without piling up duplicates. */
 export async function scheduleUpcomingPrayerNotifications(): Promise<void> {
-  await Notifications.cancelAllScheduledNotificationsAsync();
+  await cancelNotificationsOfType("prayer");
   const soundEnabled = await getAdhanSoundEnabled();
 
   const { data: location } = await supabase
@@ -88,6 +102,7 @@ export async function scheduleUpcomingPrayerNotifications(): Promise<void> {
           title: `${label} time`,
           body: `It's time for ${label} prayer.`,
           sound: soundEnabled,
+          data: { noorType: "prayer" },
         },
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.DATE,
@@ -95,6 +110,37 @@ export async function scheduleUpcomingPrayerNotifications(): Promise<void> {
         },
       });
     }
+  }
+}
+
+/** Schedules one "Hadith of the Day" notification per day for the next
+ *  `HADITH_DAYS_AHEAD` days, with that day's hadith text embedded directly in
+ *  the notification — readable straight from the lock screen/notification
+ *  shade, no need to open the app. Since local notifications can't fetch
+ *  anything at delivery time, the text has to be baked in when scheduling. */
+export async function scheduleUpcomingHadithNotifications(): Promise<void> {
+  await cancelNotificationsOfType("hadith");
+
+  const now = new Date();
+  for (let i = 0; i < HADITH_DAYS_AHEAD; i++) {
+    const day = new Date(now);
+    day.setDate(day.getDate() + i);
+    const fireDate = new Date(day);
+    fireDate.setHours(HADITH_NOTIFICATION_HOUR, 0, 0, 0);
+    if (fireDate.getTime() <= now.getTime()) continue;
+
+    const hadith = getHadithForDate(day);
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: "Hadith of the Day",
+        body: `${hadith.text} — ${hadith.reference}`,
+        data: { noorType: "hadith" },
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: fireDate,
+      },
+    });
   }
 }
 
@@ -124,7 +170,7 @@ export function useNotificationSettings() {
       if (!granted) return; // user declined — leave the switch off
       await scheduleUpcomingPrayerNotifications();
     } else {
-      await Notifications.cancelAllScheduledNotificationsAsync();
+      await cancelNotificationsOfType("prayer");
     }
     setEnabled(next);
     await AsyncStorage.setItem(STORAGE_KEY, String(next));
@@ -154,6 +200,36 @@ export function useAdhanSoundSetting() {
     // since it just re-cancels+re-adds nothing meaningful shows up.
     const notifsOn = (await AsyncStorage.getItem(STORAGE_KEY)) === "true";
     if (notifsOn) await scheduleUpcomingPrayerNotifications();
+  }, []);
+
+  return { enabled, loading, toggle };
+}
+
+/** Whether the daily "Hadith of the Day" notification is on. Independent of
+ *  the prayer-time notification toggle. */
+export function useHadithNotificationSetting() {
+  const [enabled, setEnabled] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    AsyncStorage.getItem(HADITH_STORAGE_KEY).then((v) => {
+      const isEnabled = v === "true";
+      setEnabled(isEnabled);
+      setLoading(false);
+      if (isEnabled) scheduleUpcomingHadithNotifications();
+    });
+  }, []);
+
+  const toggle = useCallback(async (next: boolean) => {
+    if (next) {
+      const granted = await ensurePermission();
+      if (!granted) return;
+      await scheduleUpcomingHadithNotifications();
+    } else {
+      await cancelNotificationsOfType("hadith");
+    }
+    setEnabled(next);
+    await AsyncStorage.setItem(HADITH_STORAGE_KEY, String(next));
   }, []);
 
   return { enabled, loading, toggle };

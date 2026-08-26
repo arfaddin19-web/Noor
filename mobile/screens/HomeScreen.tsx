@@ -25,8 +25,10 @@ import { getQuranActivityToday } from "../lib/quranProgress";
 import { getTodaySalatChecklist, toggleSalat, SALAT_ORDER, SalatChecklist } from "../lib/salatChecklist";
 import { getActiveNotices, Notice } from "../lib/notices";
 import { getTodayAyahRef } from "../lib/ayahOfDay";
+import { getHadithForDate } from "../lib/hadithOfDay";
 import { useAuth } from "../lib/useAuth";
 import { useTheme } from "../lib/ThemeContext";
+import { ARABIC_FONT_REGULAR } from "../theme";
 import type { Theme } from "../theme";
 
 type Nav = NativeStackNavigationProp<HomeStackParamList, "HomeMain">;
@@ -101,6 +103,7 @@ export default function HomeScreen() {
   const [homeMasjid, setHomeMasjid] = useState<Masjid | null>(null);
   const [notices, setNotices] = useState<Notice[]>([]);
   const [ayahOfDay, setAyahOfDay] = useState<AyahOfDay | null>(null);
+  const hadithOfDay = useMemo(() => getHadithForDate(), []);
   // Only the very first load shows the big spinner; every later focus-triggered
   // refresh happens silently behind the data already on screen.
   const hasLoadedRef = useRef(false);
@@ -417,6 +420,18 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </>
         )}
+
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionHeader}>Hadith of the Day</Text>
+        </View>
+        <TouchableOpacity
+          style={[styles.hadithCard, theme.cardShadow]}
+          onPress={() => goTo("BooksHadith")}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.hadithText}>{hadithOfDay.text}</Text>
+          <Text style={styles.hadithReference}>{hadithOfDay.reference}</Text>
+        </TouchableOpacity>
       </ScrollView>
     </ScreenBackground>
   );
@@ -564,11 +579,12 @@ function makeStyles(theme: Theme) {
       marginHorizontal: 20,
     },
     ayahArabic: {
-      fontSize: 20,
+      fontSize: 21,
       textAlign: "right",
       writingDirection: "rtl",
-      lineHeight: 34,
+      lineHeight: 38,
       color: theme.colors.textPrimary,
+      fontFamily: ARABIC_FONT_REGULAR,
       marginBottom: 10,
     },
     ayahTranslation: { fontSize: 13, color: theme.colors.textMuted, lineHeight: 20, fontStyle: "italic" },
@@ -582,5 +598,14 @@ function makeStyles(theme: Theme) {
       borderTopColor: theme.colors.border,
     },
     ayahReference: { fontSize: 12, fontWeight: "700", color: theme.colors.accent },
+    hadithCard: {
+      backgroundColor: theme.colors.cardBg,
+      borderRadius: theme.radius.lg,
+      padding: theme.spacing.lg,
+      marginHorizontal: 20,
+      marginBottom: 20,
+    },
+    hadithText: { fontSize: 14, color: theme.colors.textPrimary, lineHeight: 21 },
+    hadithReference: { fontSize: 12, fontWeight: "700", color: theme.colors.accent, marginTop: 10 },
   });
 }

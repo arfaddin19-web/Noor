@@ -2,7 +2,11 @@ import React, { useMemo } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import ScreenBackground from "../components/ScreenBackground";
-import { useNotificationSettings, useAdhanSoundSetting } from "../lib/notifications";
+import {
+  useNotificationSettings,
+  useAdhanSoundSetting,
+  useHadithNotificationSetting,
+} from "../lib/notifications";
 import { useThemeMode } from "../lib/ThemeContext";
 import type { Theme } from "../theme";
 
@@ -39,6 +43,7 @@ export default function SettingsScreen() {
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const notifs = useNotificationSettings();
   const adhanSound = useAdhanSoundSetting();
+  const hadithNotifs = useHadithNotificationSetting();
 
   return (
     <ScreenBackground>
@@ -73,6 +78,23 @@ export default function SettingsScreen() {
                 onValueChange={adhanSound.toggle}
                 disabled={!notifs.enabled}
               />
+            )
+          }
+        />
+      </View>
+
+      <Text style={styles.sectionTitle}>Hadith of the Day</Text>
+      <View style={[styles.card, theme.cardShadow]}>
+        <Row
+          icon="reader-outline"
+          label="Daily hadith notification"
+          subtitle="A short hadith every morning, right in the notification — no need to open the app."
+          theme={theme}
+          right={
+            hadithNotifs.loading ? (
+              <ActivityIndicator />
+            ) : (
+              <Switch value={hadithNotifs.enabled} onValueChange={hadithNotifs.toggle} />
             )
           }
         />
