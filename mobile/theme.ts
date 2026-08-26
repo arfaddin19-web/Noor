@@ -132,18 +132,18 @@ const lightShadow = {
   elevation: 2,
 };
 
-// Amiri Quran — the heavier, purpose-built cut of the Amiri family for
-// continuous Mushaf-style Quranic text (closer to the dense, bold look of a
-// printed Mushaf than the general-purpose Amiri Regular). The exact font in
-// the user's reference photo is the King Fahd Complex "Uthmanic Hafs"
-// typeface, which is non-commercial-only licensed and can't legally be
-// bundled in this app without buying a license — Amiri Quran is the closest
-// OFL-licensed (free, commercial-use-allowed) match. Loaded via expo-font in
-// App.tsx (assets/fonts/AmiriQuran-Regular.ttf + Amiri-Bold.ttf). Used for
-// every block of Arabic in the app (Qur'an reader, Dua/Kalima text, Ayah of
-// the Day). Amiri Quran has no bold cut, so ayah-marker numerals still use
-// regular Amiri Bold.
-export const ARABIC_FONT_REGULAR = "AmiriQuran-Regular";
+// KFGQPC Uthmanic Script HAFS — the exact typeface the user's reference photo
+// was set in (the standard Madinah Mushaf font). NOTE: this font's license is
+// free for personal/non-commercial use only — bundling it here in a real app
+// is a knowing exception the user chose to accept (see PROGRESS.md) rather
+// than a properly commercially-licensed font; getting a real license from
+// King Fahd Glorious Quran Printing Complex would remove that risk later, and
+// is a one-file swap since every screen reads the font from here. Loaded via
+// expo-font in App.tsx (assets/fonts/UthmanicHafs-Regular.otf + Amiri-Bold.ttf
+// — Uthmanic Hafs has no bold cut, so ayah-marker numerals still use Amiri
+// Bold). Used for every block of Arabic in the app (Qur'an reader, Dua/Kalima
+// text, Ayah of the Day).
+export const ARABIC_FONT_REGULAR = "UthmanicHafs-Regular";
 export const ARABIC_FONT_BOLD = "Amiri-Bold";
 
 export function getTheme(mode: "light" | "dark"): Theme {

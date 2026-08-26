@@ -48,18 +48,17 @@ up correctly in the mobile app.
     was replaced with `@expo/vector-icons` (Ionicons/MaterialCommunityIcons) for a
     consistent, non-"cartoon" look.
   - **Arabic font**: every block of Arabic text (Qur'an reader, Dua/Kalima text, Ayah
-    of the Day) renders in **Amiri Quran** — the heavier cut of the Amiri family
-    built specifically for continuous Mushaf-style Quranic text (OFL-licensed,
-    bundled in `assets/fonts/`, loaded via `expo-font`), with ayah-marker numerals
-    still in regular Amiri Bold since Amiri Quran has no bold weight. The user's
-    reference photo turned out to be the King Fahd Complex "Uthmanic Hafs" typeface
-    (the standard Madinah Mushaf font) — checked its license and it's non-commercial
-    use only, so it can't legally be bundled in this app without buying a license
-    from King Fahd Glorious Quran Printing Complex. Amiri Quran is the closest
-    OFL-licensed (free, commercial-use-allowed) match, rendered and visually compared
-    against the reference before switching. The font is used from one place
-    (`theme.ts`'s `ARABIC_FONT_REGULAR`/`_BOLD`), so a future swap — e.g. after
-    buying a Uthmanic Hafs license — is a one-file edit.
+    of the Day) renders in **KFGQPC Uthmanic Script HAFS** — the exact typeface from
+    the user's reference photo (the standard Madinah Mushaf font), with ayah-marker
+    numerals in Amiri Bold since Uthmanic Hafs has no bold cut. ⚠️ **Licensing note**:
+    this font is free for personal/non-commercial use only — the user supplied the
+    font file directly and explicitly chose to use it anyway, after being told it
+    isn't properly licensed for a commercial app (a free OFL-licensed alternative,
+    Amiri Quran, was offered and declined in favor of the exact match). Getting a
+    real commercial license from King Fahd Glorious Quran Printing Complex would
+    remove that risk. The font is used from one place (`theme.ts`'s
+    `ARABIC_FONT_REGULAR`/`_BOLD`), so swapping in a licensed version later, or
+    reverting to Amiri Quran, is a one-file edit.
   - **Onboarding**: 3-slide intro (dark sky gradient + a dependency-free View-based
     mosque skyline), shown once, then the masjid picker above.
   - **Home**: emerald gradient hero with a personalized greeting ("Assalamu alaikum,
@@ -266,12 +265,12 @@ Worth keeping in mind if something looks broken again:
   enabled, turn off "Confirm phone" for that provider — otherwise Supabase expects an
   SMS OTP code to confirm the account, and no SMS provider is wired up so that code can
   never be sent. Without both, new phone accounts will be created but can't sign in.
-- **Arabic font**: the user's reference image arrived and turned out to be the King
-  Fahd Complex "Uthmanic Hafs" typeface, which is non-commercial-use-only licensed —
-  Amiri Quran (free, OFL) is used instead as the closest legal match; see above for
-  the full explanation. Getting a pixel-exact match to the reference would mean buying
-  a commercial license for the Uthmanic Hafs font from King Fahd Glorious Quran
-  Printing Complex.
+- **Arabic font licensing risk**: the app now bundles the exact KFGQPC Uthmanic Hafs
+  font from the user's reference photo, which is free for personal/non-commercial use
+  only — see the note above. The user was offered a free, properly-licensed
+  alternative (Amiri Quran) and chose the exact match instead, accepting the risk.
+  Getting a real commercial license from King Fahd Glorious Quran Printing Complex
+  would remove it.
 - **Waiting on the user**: the full English PDFs of Muntakhab Ahadith and Bahishti
   Zewar, to add as new Books & Hadith entries. Nepali/Hindi translations of that text
   could be drafted using
