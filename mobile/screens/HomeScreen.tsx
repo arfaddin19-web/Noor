@@ -311,6 +311,7 @@ const styles = StyleSheet.create({
   },
   gridTile: { width: "29%", alignItems: "center", gap: 8 },
   gridIconWrap: {
+    ...theme.cardShadow,
     width: 56,
     height: 56,
     borderRadius: theme.radius.lg,
@@ -331,10 +332,11 @@ const styles = StyleSheet.create({
   mosqueRow: { paddingHorizontal: 20, gap: 14 },
   mosqueCard: { width: 150 },
   mosquePhoto: {
+    ...theme.cardShadow,
     width: 150,
     height: 100,
     borderRadius: theme.radius.md,
-    backgroundColor: "#dcebe7",
+    backgroundColor: theme.colors.cardBg,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 8,

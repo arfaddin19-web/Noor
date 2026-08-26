@@ -45,6 +45,22 @@ export const theme = {
     xl: 28,
     pill: 999,
   },
+  spacing: {
+    xs: 4,
+    sm: 8,
+    md: 16,
+    lg: 20,
+    xl: 28,
+  },
+  // A single soft-elevation style used on every card/button across the app, so
+  // nothing reads as a flat, unstyled block. Spread this into a style array.
+  cardShadow: {
+    shadowColor: "#0f2226",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 2,
+  },
 };
 
 export type Theme = typeof theme;

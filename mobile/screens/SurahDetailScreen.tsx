@@ -3,6 +3,9 @@ import { ActivityIndicator, FlatList, StyleSheet, Text, View } from "react-nativ
 import type { RouteProp } from "@react-navigation/native";
 import { useRoute } from "@react-navigation/native";
 import type { HomeStackParamList } from "../App";
+import AyahCard from "../components/AyahCard";
+import TranslationToggleBar from "../components/TranslationToggleBar";
+import { theme } from "../theme";
 
 interface Ayah {
   numberInSurah: number;
@@ -15,6 +18,7 @@ export default function SurahDetailScreen() {
   const { params } = useRoute<SurahRoute>();
   const [arabic, setArabic] = useState<Ayah[]>([]);
   const [translation, setTranslation] = useState<Ayah[]>([]);
+  const [showTranslation, setShowTranslation] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,7 +40,7 @@ export default function SurahDetailScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator />
+        <ActivityIndicator color={theme.colors.accent} />
       </View>
     );
   }
@@ -50,42 +54,28 @@ export default function SurahDetailScreen() {
   }
 
   return (
-    <FlatList
-      data={arabic}
-      keyExtractor={(a) => String(a.numberInSurah)}
-      contentContainerStyle={{ padding: 16 }}
-      renderItem={({ item, index }) => (
-        <View style={styles.ayahCard}>
-          <Text style={styles.ayahNumber}>{item.numberInSurah}</Text>
-          <Text style={styles.arabicText}>{item.text}</Text>
-          <Text style={styles.translationText}>{translation[index]?.text}</Text>
-        </View>
-      )}
-    />
+    <View style={styles.page}>
+      <TranslationToggleBar value={showTranslation} onValueChange={setShowTranslation} />
+      <FlatList
+        data={arabic}
+        keyExtractor={(a) => String(a.numberInSurah)}
+        contentContainerStyle={styles.listContent}
+        renderItem={({ item, index }) => (
+          <AyahCard
+            number={item.numberInSurah}
+            arabicText={item.text}
+            translationText={translation[index]?.text}
+            showTranslation={showTranslation}
+          />
+        )}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  page: { flex: 1, backgroundColor: theme.colors.pageBg },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
-  muted: { color: "#6b7280", textAlign: "center" },
-  ayahCard: {
-    backgroundColor: "white",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-  },
-  ayahNumber: {
-    fontSize: 12,
-    color: "#0e8a72",
-    fontWeight: "700",
-    marginBottom: 8,
-  },
-  arabicText: {
-    fontSize: 22,
-    textAlign: "right",
-    lineHeight: 38,
-    color: "#111827",
-    marginBottom: 10,
-  },
-  translationText: { fontSize: 14, color: "#4b5563", lineHeight: 20 },
+  muted: { color: theme.colors.textMuted, textAlign: "center" },
+  listContent: { padding: theme.spacing.md },
 });

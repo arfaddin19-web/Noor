@@ -14,6 +14,7 @@ import type { HomeStackParamList } from "../App";
 import { supabase } from "../lib/supabase";
 import { Masjid, HalalFoodPlace, JAMAT_LABELS } from "../lib/types";
 import { distanceKm, formatDistance } from "../lib/geo";
+import { theme } from "../theme";
 
 type Nav = NativeStackNavigationProp<HomeStackParamList, "Nearby">;
 
@@ -61,7 +62,7 @@ export default function NearbyScreen() {
   }, [coords]);
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={styles.page}>
       <View style={styles.toggleRow}>
         <TouchableOpacity
           style={[styles.toggle, mode === "masjids" && styles.toggleActive]}
@@ -95,11 +96,11 @@ export default function NearbyScreen() {
         <FlatList
           data={masjids}
           keyExtractor={(m) => m.id}
-          contentContainerStyle={{ padding: 16 }}
+          contentContainerStyle={styles.listContent}
           ListEmptyComponent={<Text style={styles.muted}>No masjids listed nearby yet.</Text>}
           renderItem={({ item }) => (
             <TouchableOpacity
-              style={styles.card}
+              style={[styles.card, theme.cardShadow]}
               onPress={() => navigation.navigate("MasjidDetail", { id: item.id })}
             >
               <Text style={styles.cardTitle}>{item.name}</Text>
@@ -125,11 +126,11 @@ export default function NearbyScreen() {
         <FlatList
           data={food}
           keyExtractor={(f) => f.id}
-          contentContainerStyle={{ padding: 16 }}
+          contentContainerStyle={styles.listContent}
           ListEmptyComponent={<Text style={styles.muted}>No halal food places listed nearby yet.</Text>}
           renderItem={({ item }) => (
             <TouchableOpacity
-              style={styles.card}
+              style={[styles.card, theme.cardShadow]}
               onPress={() => navigation.navigate("HalalFoodDetail", { id: item.id })}
             >
               <Text style={styles.cardTitle}>
@@ -149,33 +150,42 @@ export default function NearbyScreen() {
 }
 
 const styles = StyleSheet.create({
+  page: { flex: 1, backgroundColor: theme.colors.pageBg },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
-  muted: { color: "#6b7280", textAlign: "center" },
-  toggleRow: { flexDirection: "row", padding: 12, gap: 8 },
+  muted: { color: theme.colors.textMuted, textAlign: "center" },
+  toggleRow: { flexDirection: "row", padding: theme.spacing.md, gap: theme.spacing.sm },
   toggle: {
     flex: 1,
     paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: "#f2faf8",
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.colors.cardBg,
     alignItems: "center",
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
-  toggleActive: { backgroundColor: "#0e8a72" },
-  toggleText: { color: "#0e8a72", fontWeight: "600" },
+  toggleActive: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
+  toggleText: { color: theme.colors.textMuted, fontWeight: "700", fontSize: 13 },
   toggleTextActive: { color: "white" },
-  card: { backgroundColor: "white", borderRadius: 12, padding: 16, marginBottom: 12 },
-  cardTitle: { fontSize: 16, fontWeight: "600", color: "#111827" },
-  cardSubtitle: { fontSize: 13, color: "#6b7280", marginTop: 2 },
+  listContent: { padding: theme.spacing.md, paddingTop: 0 },
+  card: {
+    backgroundColor: theme.colors.cardBg,
+    borderRadius: theme.radius.md,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
+  },
+  cardTitle: { fontSize: 16, fontWeight: "700", color: theme.colors.textPrimary },
+  cardSubtitle: { fontSize: 13, color: theme.colors.textMuted, marginTop: 2 },
   cardMeta: { flexDirection: "row", justifyContent: "space-between", marginTop: 10 },
-  distance: { color: "#0e8a72", fontWeight: "700", fontSize: 13 },
-  metaText: { color: "#6b7280", fontSize: 13, textTransform: "capitalize" },
+  distance: { color: theme.colors.accent, fontWeight: "700", fontSize: 13 },
+  metaText: { color: theme.colors.textMuted, fontSize: 13, textTransform: "capitalize" },
   jamatRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 10 },
   jamatChip: {
-    backgroundColor: "#f2faf8",
+    backgroundColor: theme.colors.pageBg,
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 4,
     alignItems: "center",
   },
-  jamatLabel: { fontSize: 10, color: "#0e8a72", fontWeight: "600" },
-  jamatTime: { fontSize: 12, color: "#111827", fontWeight: "600" },
+  jamatLabel: { fontSize: 10, color: theme.colors.accent, fontWeight: "600" },
+  jamatTime: { fontSize: 12, color: theme.colors.textPrimary, fontWeight: "600" },
 });

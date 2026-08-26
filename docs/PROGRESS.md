@@ -45,20 +45,30 @@ up correctly in the mobile app.
     Maps. Reached from Home's mosque cards, Nearby's list, and the masjid picker.
   - **Nearby**: masjids/halal food sorted by GPS distance; masjid rows now open Masjid
     Detail instead of jumping straight to Maps.
-  - **Ask**: AI Q&A chat UI wired to the `ask-ai` Supabase Edge Function (not yet
-    deployed — see Not yet done).
+  - **Qur'an**: Surah/Para (Juz) toggle on the list screen — Juz mode fetches a
+    para's ayahs (spanning multiple surahs) via AlQuran Cloud's `/v1/juz/{n}/{edition}`
+    and shows a surah-name header wherever the surah changes within that Juz. Both
+    readers (Surah and Juz) have a "Show translation" switch instead of always
+    displaying it.
+  - **Ask**: AI Q&A chat UI wired to and verified working against the deployed
+    `ask-ai` Supabase Edge Function (see below).
   - **Account**: "Your Masjid" (see above), Supabase email/password sign up & sign in,
     profile, sign out, prayer notification toggle.
   - Navigation simplified to 3 bottom tabs — **Home / Ask / Account** — with Qibla,
     Qur'an, Hadith, and Nearby reached via Home's icon grid/stack instead of 7 cramped
     tabs.
+  - UI polish pass: every screen now shares `theme.ts` tokens (colors/spacing/radius)
+    and a common soft-elevation `cardShadow` on cards and primary buttons, replacing
+    the flat/inconsistent styling most screens had right after the initial build.
 - **Push notifications**: `mobile/lib/notifications.ts` schedules a local notification
   for each remaining Adhan over the next 7 days, toggled from Account; re-schedules
   cleanly on every toggle so nothing piles up.
-- **AI Q&A edge function** (`supabase/functions/ask-ai`): proxies to Claude with an
-  Islamic-Q&A system prompt, logs every exchange to `ai_qa_history`. Code is done;
-  **not yet deployed** to the live project (needs `supabase functions deploy` + an
-  Anthropic API key — see Not yet done).
+- **AI Q&A**: `supabase/functions/ask-ai` proxies to Claude with an Islamic-Q&A system
+  prompt, logs every exchange to `ai_qa_history`. **Deployed and verified working
+  end-to-end** — app → edge function → Claude → back to the app, logged in the admin
+  dashboard. Currently paused only because the user's Anthropic account has no billing
+  credits yet (a real "your credit balance is too low" error from Anthropic, not a bug);
+  nothing else to do here once credits are added.
 - **App icons**: placeholder crescent-mark icon/splash/adaptive-icon/favicon.
 
 ## Real bugs found and fixed while testing on a real device/project
@@ -79,13 +89,19 @@ Worth keeping in mind if something looks broken again:
    lag). Stepped every expo-*/react-native package to the exact SDK 54 template
    versions. If this recurs, check Expo Go's own Settings screen for its SDK version
    rather than assuming "latest npm version" is safe.
+4. **Ask AI "couldn't reach the server" when signed out**: `AskAiScreen` sent
+   `Authorization: Bearer ` (empty string) when there was no user session, which
+   Supabase's function gateway rejects outright. Ask AI is meant to work without
+   signing in — fixed by falling back to the public anon key (both as `apikey` and as
+   the bearer token) when signed out, same as every other Supabase call in the app.
 
 ## Not yet done / next steps
 
-- **Deploy `ask-ai`** — run `supabase functions deploy ask-ai` and
-  `supabase secrets set ANTHROPIC_API_KEY=...` (needs an Anthropic API key from the
-  user). The Ask tab is otherwise fully wired up and will work immediately once this
-  is deployed.
+- User needs to add billing credits on console.anthropic.com for Ask AI to actually
+  respond (see above — everything on our side is confirmed working).
+- **Qibla redesign** — user is sending a reference image for how they want it to look;
+  revisit once received (current version has the two-point alignment fix but not yet
+  matched to their preferred visual style).
 - Qibla compass heading math is a reasonable first pass but should be checked for
   accuracy on a real device — magnetometer calibration/tilt-compensation varies by
   phone.

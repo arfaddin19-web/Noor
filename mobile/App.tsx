@@ -12,6 +12,7 @@ import HomeScreen from "./screens/HomeScreen";
 import QiblaScreen from "./screens/QiblaScreen";
 import QuranScreen from "./screens/QuranScreen";
 import SurahDetailScreen from "./screens/SurahDetailScreen";
+import JuzDetailScreen from "./screens/JuzDetailScreen";
 import HadithScreen from "./screens/HadithScreen";
 import NearbyScreen from "./screens/NearbyScreen";
 import MasjidDetailScreen from "./screens/MasjidDetailScreen";
@@ -29,6 +30,7 @@ export type HomeStackParamList = {
   Qibla: undefined;
   QuranList: undefined;
   SurahDetail: { number: number; englishName: string };
+  JuzDetail: { number: number };
   Hadith: undefined;
   Nearby: undefined;
   MasjidDetail: { id: string };
@@ -53,6 +55,11 @@ function HomeStackNavigator() {
         name="SurahDetail"
         component={SurahDetailScreen}
         options={({ route }) => ({ title: route.params.englishName })}
+      />
+      <HomeStack.Screen
+        name="JuzDetail"
+        component={JuzDetailScreen}
+        options={({ route }) => ({ title: `Juz ${route.params.number}` })}
       />
       <HomeStack.Screen name="Hadith" component={HadithScreen} options={{ title: "Hadith" }} />
       <HomeStack.Screen name="Nearby" component={NearbyScreen} options={{ title: "Nearby" }} />

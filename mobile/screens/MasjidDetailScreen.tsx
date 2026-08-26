@@ -191,6 +191,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.pageBg,
   },
   directionButton: {
+    ...theme.cardShadow,
     backgroundColor: theme.colors.accent,
     borderRadius: theme.radius.pill,
     paddingVertical: 15,

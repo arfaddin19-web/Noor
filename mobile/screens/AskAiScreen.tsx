@@ -169,6 +169,7 @@ const styles = StyleSheet.create({
     maxHeight: 100,
   },
   sendButton: {
+    ...theme.cardShadow,
     backgroundColor: theme.colors.accent,
     paddingHorizontal: 16,
     paddingVertical: 10,

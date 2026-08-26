@@ -17,6 +17,7 @@ import { useAuth } from "../lib/useAuth";
 import { useNotificationSettings } from "../lib/notifications";
 import { getHomeCity, getHomeMasjidId } from "../lib/homeMasjid";
 import { rootNavigate } from "../lib/navigationRef";
+import { theme } from "../theme";
 
 function YourMasjidCard() {
   const [loading, setLoading] = useState(true);
@@ -225,22 +226,23 @@ export default function AccountScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 16 },
+  container: { padding: theme.spacing.md, backgroundColor: theme.colors.pageBg, flexGrow: 1 },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   card: {
-    backgroundColor: "white",
-    borderRadius: 14,
-    padding: 18,
-    marginBottom: 14,
+    ...theme.cardShadow,
+    backgroundColor: theme.colors.cardBg,
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
     alignItems: "flex-start",
   },
-  cardTitle: { fontSize: 17, fontWeight: "700", color: "#111827" },
-  cardSubtitle: { fontSize: 13, color: "#6b7280", marginTop: 4, marginBottom: 14 },
+  cardTitle: { fontSize: 17, fontWeight: "700", color: theme.colors.textPrimary },
+  cardSubtitle: { fontSize: 13, color: theme.colors.textMuted, marginTop: 4, marginBottom: 14 },
   avatar: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#0e8a72",
+    backgroundColor: theme.colors.accent,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 10,
@@ -249,27 +251,28 @@ const styles = StyleSheet.create({
   input: {
     width: "100%",
     borderWidth: 1,
-    borderColor: "#e5e7eb",
-    borderRadius: 10,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.md,
     paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingVertical: 12,
     marginBottom: 10,
     fontSize: 14,
+    backgroundColor: theme.colors.pageBg,
   },
   error: { color: "#dc2626", fontSize: 13, marginBottom: 10 },
-  notice: { color: "#0e8a72", fontSize: 13, marginBottom: 10 },
+  notice: { color: theme.colors.accent, fontSize: 13, marginBottom: 10 },
   primaryButton: {
     width: "100%",
-    backgroundColor: "#0e8a72",
-    borderRadius: 10,
-    paddingVertical: 12,
+    backgroundColor: theme.colors.accent,
+    borderRadius: theme.radius.md,
+    paddingVertical: 13,
     alignItems: "center",
   },
   primaryButtonText: { color: "white", fontWeight: "700", fontSize: 15 },
-  switchModeText: { color: "#0e8a72", fontSize: 13, fontWeight: "600" },
+  switchModeText: { color: theme.colors.accent, fontSize: 13, fontWeight: "700" },
   settingRow: { flexDirection: "row", alignItems: "center", width: "100%" },
-  settingLabel: { fontSize: 15, fontWeight: "600", color: "#111827" },
-  settingSubtitle: { fontSize: 12, color: "#6b7280", marginTop: 2 },
+  settingLabel: { fontSize: 15, fontWeight: "600", color: theme.colors.textPrimary },
+  settingSubtitle: { fontSize: 12, color: theme.colors.textMuted, marginTop: 2 },
   signOutButton: { alignItems: "center", paddingVertical: 12 },
-  signOutText: { color: "#dc2626", fontWeight: "600" },
+  signOutText: { color: "#dc2626", fontWeight: "700" },
 });

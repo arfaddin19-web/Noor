@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { theme } from "../theme";
 
 // Free, no-key hadith API: https://github.com/fawazahmed0/hadith-api
 // Response shape (per the API's documented pattern):
@@ -45,14 +46,14 @@ export default function HadithScreen() {
   }, [collection]);
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={styles.page}>
       <FlatList
         horizontal
         data={COLLECTIONS}
         keyExtractor={(c) => c.slug}
         showsHorizontalScrollIndicator={false}
         style={styles.chipRow}
-        contentContainerStyle={{ paddingHorizontal: 12, gap: 8 }}
+        contentContainerStyle={styles.chipRowContent}
         renderItem={({ item }) => (
           <TouchableOpacity
             onPress={() => setCollection(item)}
@@ -72,7 +73,7 @@ export default function HadithScreen() {
 
       {loading && (
         <View style={styles.center}>
-          <ActivityIndicator />
+          <ActivityIndicator color={theme.colors.accent} />
         </View>
       )}
       {error && (
@@ -84,10 +85,12 @@ export default function HadithScreen() {
         <FlatList
           data={hadiths}
           keyExtractor={(h) => String(h.hadithnumber)}
-          contentContainerStyle={{ padding: 16 }}
+          contentContainerStyle={styles.listContent}
           renderItem={({ item }) => (
-            <View style={styles.card}>
-              <Text style={styles.number}>Hadith {item.hadithnumber}</Text>
+            <View style={[styles.card, theme.cardShadow]}>
+              <View style={styles.numberBadge}>
+                <Text style={styles.numberText}>Hadith {item.hadithnumber}</Text>
+              </View>
               <Text style={styles.text}>{item.text}</Text>
             </View>
           )}
@@ -98,19 +101,37 @@ export default function HadithScreen() {
 }
 
 const styles = StyleSheet.create({
+  page: { flex: 1, backgroundColor: theme.colors.pageBg },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
-  muted: { color: "#6b7280", textAlign: "center" },
-  chipRow: { flexGrow: 0, paddingVertical: 10 },
+  muted: { color: theme.colors.textMuted, textAlign: "center" },
+  chipRow: { flexGrow: 0, paddingVertical: theme.spacing.md },
+  chipRowContent: { paddingHorizontal: theme.spacing.md, gap: theme.spacing.sm },
   chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: "#f2faf8",
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.colors.cardBg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
-  chipActive: { backgroundColor: "#0e8a72" },
-  chipText: { color: "#0e8a72", fontSize: 13, fontWeight: "600" },
+  chipActive: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
+  chipText: { color: theme.colors.textMuted, fontSize: 13, fontWeight: "700" },
   chipTextActive: { color: "white" },
-  card: { backgroundColor: "white", borderRadius: 12, padding: 16, marginBottom: 12 },
-  number: { fontSize: 12, color: "#0e8a72", fontWeight: "700", marginBottom: 6 },
-  text: { fontSize: 14, color: "#374151", lineHeight: 21 },
+  listContent: { padding: theme.spacing.md, paddingTop: 0 },
+  card: {
+    backgroundColor: theme.colors.cardBg,
+    borderRadius: theme.radius.md,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
+  },
+  numberBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: theme.colors.pageBg,
+    borderRadius: theme.radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    marginBottom: 10,
+  },
+  numberText: { fontSize: 11, color: theme.colors.accent, fontWeight: "700" },
+  text: { fontSize: 14, color: theme.colors.textMuted, lineHeight: 21 },
 });
