@@ -1,10 +1,11 @@
 import "react-native-url-polyfill/auto";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Text, View } from "react-native";
-import { NavigationContainer } from "@react-navigation/native";
+import { ActivityIndicator, View } from "react-native";
+import { DarkTheme, DefaultTheme, NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { StatusBar } from "expo-status-bar";
+import { Ionicons } from "@expo/vector-icons";
 
 import OnboardingScreen from "./screens/OnboardingScreen";
 import MasjidSetupScreen from "./screens/MasjidSetupScreen";
@@ -16,7 +17,11 @@ import JuzDetailScreen from "./screens/JuzDetailScreen";
 import PageDetailScreen from "./screens/PageDetailScreen";
 import HadithScreen from "./screens/HadithScreen";
 import TasbihScreen from "./screens/TasbihScreen";
-import NearbyScreen from "./screens/NearbyScreen";
+import DuaScreen from "./screens/DuaScreen";
+import DonateScreen from "./screens/DonateScreen";
+import SettingsScreen from "./screens/SettingsScreen";
+import MasjidsScreen from "./screens/MasjidsScreen";
+import HalalFoodScreen from "./screens/HalalFoodScreen";
 import MasjidDetailScreen from "./screens/MasjidDetailScreen";
 import HalalFoodDetailScreen from "./screens/HalalFoodDetailScreen";
 import AskAiScreen from "./screens/AskAiScreen";
@@ -25,7 +30,8 @@ import { setupAndroidNotificationChannel } from "./lib/notifications";
 import { hasSeenOnboarding, markOnboardingSeen } from "./lib/onboarding";
 import { isMasjidSetupDone } from "./lib/homeMasjid";
 import { navigationRef } from "./lib/navigationRef";
-import { theme } from "./theme";
+import { ThemeProvider, useTheme } from "./lib/ThemeContext";
+import type { Theme } from "./theme";
 
 export type HomeStackParamList = {
   HomeMain: undefined;
@@ -36,7 +42,11 @@ export type HomeStackParamList = {
   PageDetail: { number: number };
   Hadith: undefined;
   Tasbih: undefined;
-  Nearby: undefined;
+  Dua: undefined;
+  Donate: undefined;
+  Settings: undefined;
+  Masjids: undefined;
+  HalalFood: undefined;
   MasjidDetail: { id: string };
   HalalFoodDetail: { id: string };
 };
@@ -50,8 +60,9 @@ export type RootStackParamList = {
 const HomeStack = createNativeStackNavigator<HomeStackParamList>();
 
 function HomeStackNavigator() {
+  const theme = useTheme();
   return (
-    <HomeStack.Navigator>
+    <HomeStack.Navigator screenOptions={headerOptions(theme)}>
       <HomeStack.Screen name="HomeMain" component={HomeScreen} options={{ headerShown: false }} />
       <HomeStack.Screen name="Qibla" component={QiblaScreen} options={{ title: "Qibla Direction" }} />
       <HomeStack.Screen name="QuranList" component={QuranScreen} options={{ title: "Qur'an" }} />
@@ -72,7 +83,11 @@ function HomeStackNavigator() {
       />
       <HomeStack.Screen name="Hadith" component={HadithScreen} options={{ title: "Hadith" }} />
       <HomeStack.Screen name="Tasbih" component={TasbihScreen} options={{ title: "Tasbih" }} />
-      <HomeStack.Screen name="Nearby" component={NearbyScreen} options={{ title: "Nearby" }} />
+      <HomeStack.Screen name="Dua" component={DuaScreen} options={{ title: "Dua" }} />
+      <HomeStack.Screen name="Donate" component={DonateScreen} options={{ title: "Donate" }} />
+      <HomeStack.Screen name="Settings" component={SettingsScreen} options={{ title: "Settings" }} />
+      <HomeStack.Screen name="Masjids" component={MasjidsScreen} options={{ title: "Masjids" }} />
+      <HomeStack.Screen name="HalalFood" component={HalalFoodScreen} options={{ title: "Halal Food" }} />
       <HomeStack.Screen
         name="MasjidDetail"
         component={MasjidDetailScreen}
@@ -87,34 +102,55 @@ function HomeStackNavigator() {
   );
 }
 
-const Tab = createBottomTabNavigator();
-
-function TabIcon({ emoji }: { emoji: string }) {
-  return <Text style={{ fontSize: 18 }}>{emoji}</Text>;
+function headerOptions(theme: Theme) {
+  return {
+    headerStyle: { backgroundColor: theme.colors.cardBg },
+    headerTintColor: theme.colors.accent,
+    headerTitleStyle: { color: theme.colors.textPrimary, fontWeight: "700" as const },
+  };
 }
 
+const Tab = createBottomTabNavigator();
+
 function MainTabs() {
+  const theme = useTheme();
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: theme.colors.accent,
+        tabBarInactiveTintColor: theme.colors.textMuted,
+        tabBarStyle: { backgroundColor: theme.colors.cardBg, borderTopColor: theme.colors.border },
       }}
     >
       <Tab.Screen
         name="Home"
         component={HomeStackNavigator}
-        options={{ tabBarIcon: () => <TabIcon emoji="🏠" /> }}
+        options={{
+          tabBarIcon: ({ color, size }) => <Ionicons name="home-outline" size={size} color={color} />,
+        }}
       />
       <Tab.Screen
         name="Ask"
         component={AskAiScreen}
-        options={{ headerShown: true, tabBarIcon: () => <TabIcon emoji="💬" /> }}
+        options={{
+          headerShown: true,
+          ...headerOptions(theme),
+          title: "Ask",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="chatbubble-ellipses-outline" size={size} color={color} />
+          ),
+        }}
       />
       <Tab.Screen
         name="Account"
         component={AccountScreen}
-        options={{ headerShown: true, tabBarIcon: () => <TabIcon emoji="👤" /> }}
+        options={{
+          headerShown: true,
+          ...headerOptions(theme),
+          title: "Account",
+          tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" size={size} color={color} />,
+        }}
       />
     </Tab.Navigator>
   );
@@ -122,7 +158,8 @@ function MainTabs() {
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 
-export default function App() {
+function AppInner() {
+  const theme = useTheme();
   const [ready, setReady] = useState(false);
   const [initialRoute, setInitialRoute] = useState<keyof RootStackParamList>("Main");
 
@@ -142,15 +179,27 @@ export default function App() {
 
   if (!ready) {
     return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <ActivityIndicator />
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: theme.colors.pageBg }}>
+        <ActivityIndicator color={theme.colors.accent} />
       </View>
     );
   }
 
+  const navTheme = {
+    ...(theme.mode === "dark" ? DarkTheme : DefaultTheme),
+    colors: {
+      ...(theme.mode === "dark" ? DarkTheme.colors : DefaultTheme.colors),
+      background: theme.colors.pageBg,
+      card: theme.colors.cardBg,
+      text: theme.colors.textPrimary,
+      border: theme.colors.border,
+      primary: theme.colors.accent,
+    },
+  };
+
   return (
-    <NavigationContainer ref={navigationRef}>
-      <StatusBar style="auto" />
+    <NavigationContainer ref={navigationRef} theme={navTheme}>
+      <StatusBar style={theme.mode === "dark" ? "light" : "dark"} />
       <RootStack.Navigator
         initialRouteName={initialRoute}
         screenOptions={{ headerShown: false }}
@@ -179,5 +228,13 @@ export default function App() {
         <RootStack.Screen name="Main" component={MainTabs} />
       </RootStack.Navigator>
     </NavigationContainer>
+  );
+}
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <AppInner />
+    </ThemeProvider>
   );
 }

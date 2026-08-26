@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { StyleSheet, Switch, Text, View } from "react-native";
-import { theme } from "../theme";
+import { useTheme } from "../lib/ThemeContext";
+import type { Theme } from "../theme";
 
 export default function TranslationToggleBar({
   value,
@@ -9,6 +10,8 @@ export default function TranslationToggleBar({
   value: boolean;
   onValueChange: (v: boolean) => void;
 }) {
+  const theme = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   return (
     <View style={styles.row}>
       <Text style={styles.label}>Show translation</Text>
@@ -21,16 +24,18 @@ export default function TranslationToggleBar({
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: 10,
-    backgroundColor: theme.colors.cardBg,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: theme.colors.border,
-  },
-  label: { fontSize: 13, fontWeight: "600", color: theme.colors.textPrimary },
-});
+function makeStyles(theme: Theme) {
+  return StyleSheet.create({
+    row: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: 10,
+      backgroundColor: theme.colors.cardBg,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: theme.colors.border,
+    },
+    label: { fontSize: 13, fontWeight: "600", color: theme.colors.textPrimary },
+  });
+}

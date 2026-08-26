@@ -1,12 +1,15 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, Vibration, View } from "react-native";
 import { loadTasbihState, saveTasbihState } from "../lib/tasbih";
-import { theme } from "../theme";
+import { useTheme } from "../lib/ThemeContext";
+import type { Theme } from "../theme";
 
 const TARGETS = [33, 99, 100];
 const DHIKR_OPTIONS = ["SubhanAllah", "Alhamdulillah", "Allahu Akbar", "Astaghfirullah"];
 
 export default function TasbihScreen() {
+  const theme = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const [count, setCount] = useState(0);
   const [target, setTarget] = useState(33);
   const [rounds, setRounds] = useState(0);
@@ -94,57 +97,59 @@ export default function TasbihScreen() {
 
 const DIAL_SIZE = 220;
 
-const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: theme.colors.pageBg, alignItems: "center", paddingTop: 20 },
-  chipRow: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 8, paddingHorizontal: 20 },
-  chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: theme.radius.pill,
-    backgroundColor: theme.colors.cardBg,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  chipActive: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
-  chipText: { fontSize: 12, fontWeight: "700", color: theme.colors.textMuted },
-  chipTextActive: { color: "white" },
-  roundsRow: { marginTop: 18 },
-  roundsText: { fontSize: 13, color: theme.colors.textMuted, fontWeight: "600" },
-  dial: {
-    ...theme.cardShadow,
-    width: DIAL_SIZE,
-    height: DIAL_SIZE,
-    borderRadius: DIAL_SIZE / 2,
-    backgroundColor: theme.colors.cardBg,
-    borderWidth: 6,
-    borderColor: theme.colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 28,
-    overflow: "hidden",
-  },
-  dialFill: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: "rgba(14,138,114,0.12)",
-  },
-  count: { fontSize: 56, fontWeight: "800", color: theme.colors.accent },
-  target: { fontSize: 16, color: theme.colors.textMuted, marginTop: -6 },
-  tapHint: { fontSize: 11, color: theme.colors.textMuted, marginTop: 10 },
-  targetRow: { flexDirection: "row", gap: 10, marginTop: 30 },
-  targetChip: {
-    paddingHorizontal: 18,
-    paddingVertical: 8,
-    borderRadius: theme.radius.pill,
-    backgroundColor: theme.colors.cardBg,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  targetChipActive: { backgroundColor: theme.colors.gold, borderColor: theme.colors.gold },
-  targetChipText: { fontSize: 13, fontWeight: "700", color: theme.colors.textMuted },
-  targetChipTextActive: { color: "white" },
-  resetButton: { marginTop: 20, paddingVertical: 10 },
-  resetText: { color: theme.colors.textMuted, fontWeight: "600", fontSize: 13 },
-});
+function makeStyles(theme: Theme) {
+  return StyleSheet.create({
+    page: { flex: 1, backgroundColor: theme.colors.pageBg, alignItems: "center", paddingTop: 20 },
+    chipRow: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 8, paddingHorizontal: 20 },
+    chip: {
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: theme.radius.pill,
+      backgroundColor: theme.colors.cardBg,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    chipActive: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
+    chipText: { fontSize: 12, fontWeight: "700", color: theme.colors.textMuted },
+    chipTextActive: { color: "white" },
+    roundsRow: { marginTop: 18 },
+    roundsText: { fontSize: 13, color: theme.colors.textMuted, fontWeight: "600" },
+    dial: {
+      ...theme.cardShadow,
+      width: DIAL_SIZE,
+      height: DIAL_SIZE,
+      borderRadius: DIAL_SIZE / 2,
+      backgroundColor: theme.colors.cardBg,
+      borderWidth: 6,
+      borderColor: theme.colors.border,
+      alignItems: "center",
+      justifyContent: "center",
+      marginTop: 28,
+      overflow: "hidden",
+    },
+    dialFill: {
+      position: "absolute",
+      bottom: 0,
+      left: 0,
+      right: 0,
+      backgroundColor: theme.mode === "dark" ? "rgba(18,161,134,0.22)" : "rgba(14,138,114,0.12)",
+    },
+    count: { fontSize: 56, fontWeight: "800", color: theme.colors.accent },
+    target: { fontSize: 16, color: theme.colors.textMuted, marginTop: -6 },
+    tapHint: { fontSize: 11, color: theme.colors.textMuted, marginTop: 10 },
+    targetRow: { flexDirection: "row", gap: 10, marginTop: 30 },
+    targetChip: {
+      paddingHorizontal: 18,
+      paddingVertical: 8,
+      borderRadius: theme.radius.pill,
+      backgroundColor: theme.colors.cardBg,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    targetChipActive: { backgroundColor: theme.colors.gold, borderColor: theme.colors.gold },
+    targetChipText: { fontSize: 13, fontWeight: "700", color: theme.colors.textMuted },
+    targetChipTextActive: { color: "white" },
+    resetButton: { marginTop: 20, paddingVertical: 10 },
+    resetText: { color: theme.colors.textMuted, fontWeight: "600", fontSize: 13 },
+  });
+}

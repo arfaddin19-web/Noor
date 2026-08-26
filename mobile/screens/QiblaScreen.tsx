@@ -1,8 +1,9 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Animated, StyleSheet, Text, View } from "react-native";
 import * as Location from "expo-location";
 import { Magnetometer } from "expo-sensors";
-import { theme } from "../theme";
+import { useTheme } from "../lib/ThemeContext";
+import type { Theme } from "../theme";
 
 // Kaaba coordinates
 const KAABA_LAT = 21.4225;
@@ -92,7 +93,7 @@ function CompassMark({
 
 /** The Qibla needle — a full-diameter bar that rotates (within the dial) to point at
  *  `bearing`: a red half toward the Kaaba, a muted tail on the opposite side. */
-function Needle({ bearing }: { bearing: number }) {
+function Needle({ bearing, styles }: { bearing: number; styles: ReturnType<typeof makeStyles> }) {
   return (
     <View style={[StyleSheet.absoluteFill, { transform: [{ rotate: `${bearing}deg` }] }]}>
       <View style={styles.needleTop} />
@@ -105,6 +106,8 @@ function Needle({ bearing }: { bearing: number }) {
 }
 
 export default function QiblaScreen() {
+  const theme = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [qiblaBearing, setQiblaBearing] = useState<number | null>(null);
   const heading = useMagnetometerHeading();
@@ -194,7 +197,7 @@ export default function QiblaScreen() {
             </CompassMark>
           ))}
 
-          <Needle bearing={qiblaBearing} />
+          <Needle bearing={qiblaBearing} styles={styles} />
         </Animated.View>
 
         <View style={[styles.centerHub, isAligned && styles.centerHubAligned]} />
@@ -207,7 +210,8 @@ export default function QiblaScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(theme: Theme) {
+  return StyleSheet.create({
   page: { flex: 1, backgroundColor: theme.colors.pageBg, alignItems: "center", paddingTop: 24 },
   center: {
     flex: 1,
@@ -299,4 +303,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   statusTextAligned: { color: theme.colors.accent },
-});
+  });
+}

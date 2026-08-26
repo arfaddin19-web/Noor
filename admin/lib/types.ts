@@ -87,6 +87,23 @@ export interface AiQaHistory {
   created_at: string;
 }
 
+export interface Notice {
+  id: string;
+  title: string;
+  body: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface DonationInfo {
+  message: string;
+  bank_name: string;
+  account_name: string;
+  account_number: string;
+  esewa_id: string;
+  khalti_id: string;
+}
+
 export const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",

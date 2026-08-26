@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { theme } from "../theme";
+import { useTheme } from "../lib/ThemeContext";
+import type { Theme } from "../theme";
 
 export default function AyahCard({
   number,
@@ -13,6 +14,8 @@ export default function AyahCard({
   translationText?: string;
   showTranslation: boolean;
 }) {
+  const theme = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   return (
     <View style={[styles.card, theme.cardShadow]}>
       <View style={styles.numberBadge}>
@@ -26,28 +29,30 @@ export default function AyahCard({
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: theme.colors.cardBg,
-    borderRadius: theme.radius.md,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
-  },
-  numberBadge: {
-    alignSelf: "flex-start",
-    backgroundColor: theme.colors.pageBg,
-    borderRadius: theme.radius.pill,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    marginBottom: 10,
-  },
-  numberText: { fontSize: 11, color: theme.colors.accent, fontWeight: "700" },
-  arabicText: {
-    fontSize: 23,
-    textAlign: "right",
-    lineHeight: 40,
-    color: theme.colors.textPrimary,
-    marginBottom: 10,
-  },
-  translationText: { fontSize: 14, color: theme.colors.textMuted, lineHeight: 21 },
-});
+function makeStyles(theme: Theme) {
+  return StyleSheet.create({
+    card: {
+      backgroundColor: theme.colors.cardBg,
+      borderRadius: theme.radius.md,
+      padding: theme.spacing.md,
+      marginBottom: theme.spacing.sm,
+    },
+    numberBadge: {
+      alignSelf: "flex-start",
+      backgroundColor: theme.colors.pageBg,
+      borderRadius: theme.radius.pill,
+      paddingHorizontal: 10,
+      paddingVertical: 3,
+      marginBottom: 10,
+    },
+    numberText: { fontSize: 11, color: theme.colors.accent, fontWeight: "700" },
+    arabicText: {
+      fontSize: 23,
+      textAlign: "right",
+      lineHeight: 40,
+      color: theme.colors.textPrimary,
+      marginBottom: 10,
+    },
+    translationText: { fontSize: 14, color: theme.colors.textMuted, lineHeight: 21 },
+  });
+}

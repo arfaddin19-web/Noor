@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   RefreshControl,
@@ -9,8 +9,10 @@ import {
   View,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { ComponentProps } from "react";
 import type { HomeStackParamList } from "../App";
 import MosqueSkyline from "../components/MosqueSkyline";
 import { supabase } from "../lib/supabase";
@@ -20,24 +22,49 @@ import { formatHijri } from "../lib/hijri";
 import { getHomeCity, getHomeMasjidId } from "../lib/homeMasjid";
 import { getQuranActivityToday } from "../lib/quranProgress";
 import { getTodaySalatChecklist, toggleSalat, SALAT_ORDER, SalatChecklist } from "../lib/salatChecklist";
+import { getActiveNotices, Notice } from "../lib/notices";
 import { useAuth } from "../lib/useAuth";
-import { theme } from "../theme";
+import { useTheme } from "../lib/ThemeContext";
+import type { Theme } from "../theme";
 
 type Nav = NativeStackNavigationProp<HomeStackParamList, "HomeMain">;
+type IoniconName = ComponentProps<typeof Ionicons>["name"];
+type MCIName = ComponentProps<typeof MaterialCommunityIcons>["name"];
 
-// Qibla/QuranList/Hadith/Tasbih/Nearby live in this same Home stack; Ask/Account
-// are sibling *tabs*, reached via the parent tab navigator instead.
-const HOME_STACK_SCREENS = new Set(["Qibla", "QuranList", "Hadith", "Tasbih", "Nearby"]);
+// Everything except Ask/Account lives in this same Home stack; those two are
+// sibling *tabs*, reached via the parent tab navigator instead.
+const HOME_STACK_SCREENS = new Set([
+  "Qibla",
+  "QuranList",
+  "Hadith",
+  "Tasbih",
+  "Dua",
+  "Donate",
+  "Settings",
+  "Masjids",
+  "HalalFood",
+]);
 
-const GRID_ITEMS = [
-  { key: "Qibla", label: "Qibla Direction", emoji: "🧭", color: theme.colors.tile1 },
-  { key: "QuranList", label: "Qur'an", emoji: "📖", color: theme.colors.tile2 },
-  { key: "Hadith", label: "Hadith", emoji: "📜", color: theme.colors.tile3 },
-  { key: "Tasbih", label: "Tasbih", emoji: "📿", color: theme.colors.tile7 },
-  { key: "Nearby", label: "Nearby", emoji: "🍽️", color: theme.colors.tile4 },
-  { key: "Ask", label: "Ask AI", emoji: "💬", color: theme.colors.tile5 },
-  { key: "Account", label: "Account", emoji: "👤", color: theme.colors.tile6 },
-] as const;
+type GridItem = {
+  key: string;
+  label: string;
+  set: "ion" | "mci";
+  icon: IoniconName | MCIName;
+};
+
+const GRID_ITEMS: GridItem[] = [
+  { key: "Qibla", label: "Qibla", set: "ion", icon: "compass-outline" },
+  { key: "QuranList", label: "Qur'an", set: "ion", icon: "book-outline" },
+  { key: "Hadith", label: "Hadith", set: "ion", icon: "document-text-outline" },
+  { key: "Tasbih", label: "Tasbih", set: "mci", icon: "counter" },
+  { key: "Masjids", label: "Masjids", set: "mci", icon: "mosque" },
+  { key: "HalalFood", label: "Halal Food", set: "ion", icon: "restaurant-outline" },
+  { key: "Dua", label: "Dua", set: "mci", icon: "hands-pray" },
+  { key: "Donate", label: "Donate", set: "ion", icon: "heart-outline" },
+  { key: "Settings", label: "Settings", set: "ion", icon: "settings-outline" },
+  { key: "Ask", label: "Ask AI", set: "ion", icon: "chatbubble-ellipses-outline" },
+  { key: "Account", label: "Account", set: "ion", icon: "person-outline" },
+];
 
 const JAMAT_KEY_FOR_LABEL: Record<string, keyof Masjid> = {
   Fajr: "fajr_jamat",
@@ -48,6 +75,12 @@ const JAMAT_KEY_FOR_LABEL: Record<string, keyof Masjid> = {
 };
 
 export default function HomeScreen() {
+  const theme = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+  const tileColors = [
+    theme.colors.tile1, theme.colors.tile2, theme.colors.tile3, theme.colors.tile4,
+    theme.colors.tile5, theme.colors.tile6, theme.colors.tile7, theme.colors.tile8,
+  ];
   const navigation = useNavigation<Nav>();
   const { profile } = useAuth();
   const [location, setLocation] = useState<Location | null>(null);
@@ -56,6 +89,7 @@ export default function HomeScreen() {
   const [masjids, setMasjids] = useState<Masjid[]>([]);
   const [homeMasjid, setHomeMasjid] = useState<Masjid | null>(null);
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
+  const [notices, setNotices] = useState<Notice[]>([]);
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(new Date());
   const [checklist, setChecklist] = useState<SalatChecklist>({
@@ -69,17 +103,20 @@ export default function HomeScreen() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [{ data: loc }, homeCity, homeMasjidId, todayChecklist, quranCount] = await Promise.all([
-      supabase.from("locations").select("*").eq("is_default", true).single(),
-      getHomeCity(),
-      getHomeMasjidId(),
-      getTodaySalatChecklist(),
-      getQuranActivityToday(),
-    ]);
+    const [{ data: loc }, homeCity, homeMasjidId, todayChecklist, quranCount, activeNotices] =
+      await Promise.all([
+        supabase.from("locations").select("*").eq("is_default", true).single(),
+        getHomeCity(),
+        getHomeMasjidId(),
+        getTodaySalatChecklist(),
+        getQuranActivityToday(),
+        getActiveNotices(),
+      ]);
     setLocation((loc as Location | null) ?? null);
     setSelectedCity(homeCity);
     setChecklist(todayChecklist);
     setQuranActivity(quranCount);
+    setNotices(activeNotices);
 
     if (loc) {
       const { month, day } = todayMonthDay();
@@ -149,9 +186,11 @@ export default function HomeScreen() {
     setChecklist(updated);
   }
 
-  function goTo(key: (typeof GRID_ITEMS)[number]["key"]) {
+  function goTo(key: string) {
     if (HOME_STACK_SCREENS.has(key)) {
-      navigation.navigate(key as "Qibla" | "QuranList" | "Hadith" | "Tasbih" | "Nearby");
+      // Every route in HOME_STACK_SCREENS takes no params, but TS can't narrow
+      // navigate()'s overload from a plain `string` key — cast is safe here.
+      (navigation.navigate as (screen: string) => void)(key);
     } else {
       // "Ask" / "Account" are sibling tabs, not routes in this stack.
       navigation.getParent()?.navigate(key);
@@ -164,7 +203,7 @@ export default function HomeScreen() {
     <ScrollView
       style={styles.page}
       contentContainerStyle={{ paddingBottom: 32 }}
-      refreshControl={<RefreshControl refreshing={false} onRefresh={load} />}
+      refreshControl={<RefreshControl refreshing={false} onRefresh={load} tintColor={theme.colors.accent} />}
     >
       <LinearGradient
         colors={[theme.colors.skyTop, theme.colors.skyMid, theme.colors.skyBottom]}
@@ -176,15 +215,15 @@ export default function HomeScreen() {
               Assalamu alaikum{firstName ? `, ${firstName}` : ""}
             </Text>
             <View style={styles.locationRow}>
-              <Text style={styles.pinIcon}>📍</Text>
+              <Ionicons name="location-outline" size={13} color={theme.colors.textOnDarkMuted} />
               <Text style={styles.locationText} numberOfLines={1}>
                 {homeMasjid ? homeMasjid.name : (location?.name ?? "Set your location")}
               </Text>
             </View>
           </View>
-          <View style={styles.bellButton}>
-            <Text style={{ fontSize: 16 }}>🔔</Text>
-          </View>
+          <TouchableOpacity style={styles.bellButton} onPress={() => navigation.navigate("Settings")}>
+            <Ionicons name="notifications-outline" size={18} color={theme.colors.textOnDark} />
+          </TouchableOpacity>
         </View>
 
         <Text style={styles.dateText}>
@@ -212,6 +251,7 @@ export default function HomeScreen() {
                 <View style={styles.prayerCol}>
                   <Text style={styles.glassLabel}>Current</Text>
                   <Text style={styles.currentPrayerLabel}>{current?.label ?? "—"}</Text>
+                  <Text style={styles.endsAtText}>until {next.time.toTimeString().slice(0, 5)}</Text>
                 </View>
                 <View style={styles.colDivider} />
                 <View style={styles.prayerCol}>
@@ -236,6 +276,18 @@ export default function HomeScreen() {
         <MosqueSkyline color={theme.colors.gold} style={styles.skyline} />
       </LinearGradient>
 
+      {notices.length > 0 && (
+        <View style={[styles.noticeCard, theme.cardShadow]}>
+          <View style={styles.noticeIconWrap}>
+            <Ionicons name="megaphone-outline" size={16} color={theme.colors.accentDark} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.noticeTitle}>{notices[0].title}</Text>
+            <Text style={styles.noticeBody}>{notices[0].body}</Text>
+          </View>
+        </View>
+      )}
+
       <View style={[styles.progressCard, theme.cardShadow]}>
         <Text style={styles.progressTitle}>Today's Progress</Text>
 
@@ -249,7 +301,7 @@ export default function HomeScreen() {
                 onPress={() => handleToggleSalat(p.key)}
               >
                 <View style={[styles.salatDot, done && styles.salatDotDone]}>
-                  {done && <Text style={styles.salatCheck}>✓</Text>}
+                  {done && <Ionicons name="checkmark" size={16} color="white" />}
                 </View>
                 <Text style={styles.salatLabel}>{p.label}</Text>
               </TouchableOpacity>
@@ -267,10 +319,14 @@ export default function HomeScreen() {
       </View>
 
       <View style={styles.grid}>
-        {GRID_ITEMS.map((item) => (
+        {GRID_ITEMS.map((item, i) => (
           <TouchableOpacity key={item.key} style={styles.gridTile} onPress={() => goTo(item.key)}>
-            <View style={[styles.gridIconWrap, { backgroundColor: item.color }]}>
-              <Text style={{ fontSize: 22 }}>{item.emoji}</Text>
+            <View style={[styles.gridIconWrap, { backgroundColor: tileColors[i % tileColors.length] }]}>
+              {item.set === "ion" ? (
+                <Ionicons name={item.icon as IoniconName} size={24} color="white" />
+              ) : (
+                <MaterialCommunityIcons name={item.icon as MCIName} size={24} color="white" />
+              )}
             </View>
             <Text style={styles.gridLabel}>{item.label}</Text>
           </TouchableOpacity>
@@ -281,7 +337,7 @@ export default function HomeScreen() {
         <Text style={styles.sectionHeader}>
           {selectedCity ? `Mosques in ${selectedCity}` : "Mosques"}
         </Text>
-        <TouchableOpacity onPress={() => navigation.navigate("Nearby")}>
+        <TouchableOpacity onPress={() => navigation.navigate("Masjids")}>
           <Text style={styles.seeAll}>See all</Text>
         </TouchableOpacity>
       </View>
@@ -297,11 +353,11 @@ export default function HomeScreen() {
             onPress={() => navigation.navigate("MasjidDetail", { id: m.id })}
           >
             <View style={styles.mosquePhoto}>
-              <Text style={{ fontSize: 30 }}>🕌</Text>
+              <MaterialCommunityIcons name="mosque" size={30} color={theme.colors.accent} />
             </View>
             <Text style={styles.mosqueName} numberOfLines={1}>{m.name}</Text>
             {m.address && (
-              <Text style={styles.mosqueAddress} numberOfLines={1}>📍 {m.address}</Text>
+              <Text style={styles.mosqueAddress} numberOfLines={1}>{m.address}</Text>
             )}
           </TouchableOpacity>
         ))}
@@ -310,131 +366,154 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: theme.colors.pageBg },
-  hero: {
-    paddingTop: 56,
-    paddingHorizontal: 20,
-    paddingBottom: 56,
-    borderBottomLeftRadius: theme.radius.xl,
-    borderBottomRightRadius: theme.radius.xl,
-    overflow: "hidden",
-  },
-  topBar: { flexDirection: "row", alignItems: "flex-start", gap: 10, marginBottom: 14 },
-  greeting: { color: theme.colors.textOnDark, fontSize: 18, fontWeight: "700", marginBottom: 6 },
-  locationRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  pinIcon: { fontSize: 12 },
-  locationText: { color: theme.colors.textOnDarkMuted, fontSize: 13, fontWeight: "600", flexShrink: 1 },
-  bellButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "rgba(255,255,255,0.16)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  dateText: { color: theme.colors.textOnDarkMuted, fontSize: 13, marginBottom: 16 },
-  glassCard: {
-    backgroundColor: theme.colors.glass,
-    borderWidth: 1,
-    borderColor: theme.colors.glassBorder,
-    borderRadius: theme.radius.lg,
-    padding: 18,
-  },
-  glassLabel: { color: theme.colors.textOnDarkMuted, fontSize: 12 },
-  prayerCols: { flexDirection: "row", alignItems: "center" },
-  prayerCol: { flex: 1 },
-  colDivider: { width: 1, height: 44, backgroundColor: theme.colors.glassBorder, marginHorizontal: 16 },
-  currentPrayerLabel: { color: theme.colors.textOnDark, fontSize: 22, fontWeight: "800", marginTop: 4 },
-  emptyText: { color: theme.colors.textOnDarkMuted, textAlign: "center" },
-  emptyTextDark: { color: theme.colors.textMuted, paddingHorizontal: 20 },
-  nowPrayerLabel: { color: theme.colors.gold, fontSize: 18, fontWeight: "700", marginTop: 4 },
-  nowPrayerTime: { color: theme.colors.textOnDark, fontSize: 26, fontWeight: "800", marginTop: 2 },
-  jamatBanner: {
-    marginTop: 14,
-    paddingTop: 14,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.glassBorder,
-  },
-  jamatBannerText: { color: theme.colors.textOnDark, fontSize: 13, fontWeight: "600" },
-  skyline: {
-    position: "absolute",
-    bottom: -6,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 16,
-    opacity: 0.5,
-  },
-  progressCard: {
-    backgroundColor: theme.colors.cardBg,
-    borderRadius: theme.radius.lg,
-    padding: theme.spacing.lg,
-    marginHorizontal: 20,
-    marginTop: -28,
-  },
-  progressTitle: { fontSize: 15, fontWeight: "700", color: theme.colors.textPrimary, marginBottom: 14 },
-  salatRow: { flexDirection: "row", justifyContent: "space-between" },
-  salatItem: { alignItems: "center", gap: 6 },
-  salatDot: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    borderWidth: 2,
-    borderColor: theme.colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  salatDotDone: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
-  salatCheck: { color: "white", fontSize: 15, fontWeight: "800" },
-  salatLabel: { fontSize: 11, color: theme.colors.textMuted, fontWeight: "600" },
-  progressBarTrack: {
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: theme.colors.border,
-    marginTop: 16,
-    overflow: "hidden",
-  },
-  progressBarFill: { height: "100%", backgroundColor: theme.colors.accent, borderRadius: 3 },
-  progressSubtitle: { fontSize: 12, color: theme.colors.textMuted, marginTop: 10, fontWeight: "600" },
-  grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    paddingHorizontal: 20,
-    marginTop: 26,
-    gap: 14,
-  },
-  gridTile: { width: "21%", alignItems: "center", gap: 8 },
-  gridIconWrap: {
-    ...theme.cardShadow,
-    width: 52,
-    height: 52,
-    borderRadius: theme.radius.lg,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  gridLabel: { fontSize: 10, color: theme.colors.textPrimary, textAlign: "center", fontWeight: "600" },
-  sectionHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    marginTop: 28,
-    marginBottom: 12,
-  },
-  sectionHeader: { fontSize: 17, fontWeight: "700", color: theme.colors.textPrimary },
-  seeAll: { fontSize: 13, color: theme.colors.accent, fontWeight: "600" },
-  mosqueRow: { paddingHorizontal: 20, gap: 14 },
-  mosqueCard: { width: 150 },
-  mosquePhoto: {
-    ...theme.cardShadow,
-    width: 150,
-    height: 100,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.cardBg,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 8,
-  },
-  mosqueName: { fontSize: 13, fontWeight: "700", color: theme.colors.textPrimary },
-  mosqueAddress: { fontSize: 11, color: theme.colors.textMuted, marginTop: 2 },
-});
+function makeStyles(theme: Theme) {
+  return StyleSheet.create({
+    page: { flex: 1, backgroundColor: theme.colors.pageBg },
+    hero: {
+      paddingTop: 56,
+      paddingHorizontal: 20,
+      paddingBottom: 56,
+      borderBottomLeftRadius: theme.radius.xl,
+      borderBottomRightRadius: theme.radius.xl,
+      overflow: "hidden",
+    },
+    topBar: { flexDirection: "row", alignItems: "flex-start", gap: 10, marginBottom: 14 },
+    greeting: { color: theme.colors.textOnDark, fontSize: 18, fontWeight: "700", marginBottom: 6 },
+    locationRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+    locationText: { color: theme.colors.textOnDarkMuted, fontSize: 13, fontWeight: "600", flexShrink: 1 },
+    bellButton: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: "rgba(255,255,255,0.16)",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    dateText: { color: theme.colors.textOnDarkMuted, fontSize: 13, marginBottom: 16 },
+    glassCard: {
+      backgroundColor: theme.colors.glass,
+      borderWidth: 1,
+      borderColor: theme.colors.glassBorder,
+      borderRadius: theme.radius.lg,
+      padding: 18,
+    },
+    glassLabel: { color: theme.colors.textOnDarkMuted, fontSize: 12 },
+    prayerCols: { flexDirection: "row", alignItems: "center" },
+    prayerCol: { flex: 1 },
+    colDivider: { width: 1, height: 52, backgroundColor: theme.colors.glassBorder, marginHorizontal: 16 },
+    currentPrayerLabel: { color: theme.colors.textOnDark, fontSize: 22, fontWeight: "800", marginTop: 4 },
+    endsAtText: { color: theme.colors.textOnDarkMuted, fontSize: 11, marginTop: 3, fontWeight: "600" },
+    emptyText: { color: theme.colors.textOnDarkMuted, textAlign: "center" },
+    emptyTextDark: { color: theme.colors.textMuted, paddingHorizontal: 20 },
+    nowPrayerLabel: { color: theme.colors.gold, fontSize: 18, fontWeight: "700", marginTop: 4 },
+    nowPrayerTime: { color: theme.colors.textOnDark, fontSize: 26, fontWeight: "800", marginTop: 2 },
+    jamatBanner: {
+      marginTop: 14,
+      paddingTop: 14,
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.glassBorder,
+    },
+    jamatBannerText: { color: theme.colors.textOnDark, fontSize: 13, fontWeight: "600" },
+    skyline: {
+      position: "absolute",
+      bottom: -6,
+      left: 0,
+      right: 0,
+      paddingHorizontal: 16,
+      opacity: 0.5,
+    },
+    noticeCard: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: 10,
+      backgroundColor: theme.colors.cardBg,
+      borderRadius: theme.radius.lg,
+      padding: theme.spacing.md,
+      marginHorizontal: 20,
+      marginTop: -28,
+    },
+    noticeIconWrap: {
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      backgroundColor: theme.colors.gold,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    noticeTitle: { fontSize: 13, fontWeight: "700", color: theme.colors.textPrimary },
+    noticeBody: { fontSize: 12, color: theme.colors.textMuted, marginTop: 2, lineHeight: 17 },
+    progressCard: {
+      backgroundColor: theme.colors.cardBg,
+      borderRadius: theme.radius.lg,
+      padding: theme.spacing.lg,
+      marginHorizontal: 20,
+      marginTop: 16,
+    },
+    progressTitle: { fontSize: 15, fontWeight: "700", color: theme.colors.textPrimary, marginBottom: 14 },
+    salatRow: { flexDirection: "row", justifyContent: "space-between" },
+    salatItem: { alignItems: "center", gap: 6 },
+    salatDot: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      borderWidth: 2,
+      borderColor: theme.colors.border,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    salatDotDone: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
+    salatLabel: { fontSize: 11, color: theme.colors.textMuted, fontWeight: "600" },
+    progressBarTrack: {
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: theme.colors.border,
+      marginTop: 16,
+      overflow: "hidden",
+    },
+    progressBarFill: { height: "100%", backgroundColor: theme.colors.accent, borderRadius: 3 },
+    progressSubtitle: { fontSize: 12, color: theme.colors.textMuted, marginTop: 10, fontWeight: "600" },
+    grid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      paddingHorizontal: 20,
+      marginTop: 26,
+      rowGap: 20,
+      columnGap: 0,
+      justifyContent: "space-between",
+    },
+    gridTile: { width: "31%", alignItems: "center", gap: 8 },
+    gridIconWrap: {
+      ...theme.cardShadow,
+      width: 64,
+      height: 64,
+      borderRadius: theme.radius.lg,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    gridLabel: { fontSize: 12, color: theme.colors.textPrimary, textAlign: "center", fontWeight: "600" },
+    sectionHeaderRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingHorizontal: 20,
+      marginTop: 28,
+      marginBottom: 12,
+    },
+    sectionHeader: { fontSize: 17, fontWeight: "700", color: theme.colors.textPrimary },
+    seeAll: { fontSize: 13, color: theme.colors.accent, fontWeight: "600" },
+    mosqueRow: { paddingHorizontal: 20, gap: 14 },
+    mosqueCard: { width: 150 },
+    mosquePhoto: {
+      ...theme.cardShadow,
+      width: 150,
+      height: 100,
+      borderRadius: theme.radius.md,
+      backgroundColor: theme.colors.pageBg,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 8,
+    },
+    mosqueName: { fontSize: 13, fontWeight: "700", color: theme.colors.textPrimary },
+    mosqueAddress: { fontSize: 11, color: theme.colors.textMuted, marginTop: 2 },
+  });
+}

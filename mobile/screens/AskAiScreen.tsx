@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -10,9 +10,11 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
 import { supabase } from "../lib/supabase";
-import { theme } from "../theme";
+import { useTheme } from "../lib/ThemeContext";
+import type { Theme } from "../theme";
 
 interface Message {
   id: string;
@@ -27,6 +29,8 @@ const { supabaseUrl, supabaseAnonKey } = (Constants.expoConfig?.extra ?? {}) as 
 const FUNCTION_URL = `${supabaseUrl}/functions/v1/ask-ai`;
 
 export default function AskAiScreen() {
+  const theme = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "intro",
@@ -110,7 +114,7 @@ export default function AskAiScreen() {
       />
       {sending && (
         <View style={styles.typingRow}>
-          <ActivityIndicator size="small" />
+          <ActivityIndicator size="small" color={theme.colors.accent} />
           <Text style={styles.typingText}>Thinking…</Text>
         </View>
       )}
@@ -119,61 +123,66 @@ export default function AskAiScreen() {
           value={input}
           onChangeText={setInput}
           placeholder="Ask a question…"
+          placeholderTextColor={theme.colors.textMuted}
           style={styles.input}
           multiline
         />
         <TouchableOpacity onPress={send} style={styles.sendButton} disabled={sending}>
-          <Text style={styles.sendButtonText}>Send</Text>
+          <Ionicons name="send" size={17} color="white" />
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
   );
 }
 
-const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: theme.colors.pageBg },
-  bubble: { maxWidth: "85%", borderRadius: theme.radius.md, padding: 12, marginBottom: 10 },
-  bubbleUser: { alignSelf: "flex-end", backgroundColor: theme.colors.accent },
-  bubbleAssistant: {
-    alignSelf: "flex-start",
-    backgroundColor: "white",
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  bubbleText: { color: theme.colors.textPrimary, lineHeight: 20 },
-  bubbleTextUser: { color: "white", lineHeight: 20 },
-  typingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingBottom: 4,
-  },
-  typingText: { color: theme.colors.textMuted, fontSize: 12 },
-  inputRow: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    padding: 12,
-    gap: 8,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: theme.colors.border,
-    backgroundColor: "white",
-  },
-  input: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.pill,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    maxHeight: 100,
-  },
-  sendButton: {
-    ...theme.cardShadow,
-    backgroundColor: theme.colors.accent,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: theme.radius.pill,
-  },
-  sendButtonText: { color: "white", fontWeight: "600" },
-});
+function makeStyles(theme: Theme) {
+  return StyleSheet.create({
+    flex: { flex: 1, backgroundColor: theme.colors.pageBg },
+    bubble: { maxWidth: "85%", borderRadius: theme.radius.md, padding: 12, marginBottom: 10 },
+    bubbleUser: { alignSelf: "flex-end", backgroundColor: theme.colors.accent },
+    bubbleAssistant: {
+      alignSelf: "flex-start",
+      backgroundColor: theme.colors.cardBg,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    bubbleText: { color: theme.colors.textPrimary, lineHeight: 20 },
+    bubbleTextUser: { color: "white", lineHeight: 20 },
+    typingRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      paddingHorizontal: 16,
+      paddingBottom: 4,
+    },
+    typingText: { color: theme.colors.textMuted, fontSize: 12 },
+    inputRow: {
+      flexDirection: "row",
+      alignItems: "flex-end",
+      padding: 12,
+      gap: 8,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: theme.colors.border,
+      backgroundColor: theme.colors.cardBg,
+    },
+    input: {
+      flex: 1,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: theme.radius.pill,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      maxHeight: 100,
+      color: theme.colors.textPrimary,
+    },
+    sendButton: {
+      ...theme.cardShadow,
+      backgroundColor: theme.colors.accent,
+      width: 42,
+      height: 42,
+      borderRadius: 21,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+  });
+}

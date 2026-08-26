@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -7,7 +7,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { theme } from "../theme";
+import { useTheme } from "../lib/ThemeContext";
+import type { Theme } from "../theme";
 
 // Free, no-key hadith API: https://github.com/fawazahmed0/hadith-api
 // Response shape (per the API's documented pattern):
@@ -30,6 +31,8 @@ interface Hadith {
 }
 
 export default function HadithScreen() {
+  const theme = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const [collection, setCollection] = useState(COLLECTIONS[0]);
   const [hadiths, setHadiths] = useState<Hadith[]>([]);
   const [loading, setLoading] = useState(true);
@@ -100,38 +103,40 @@ export default function HadithScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: theme.colors.pageBg },
-  center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
-  muted: { color: theme.colors.textMuted, textAlign: "center" },
-  chipRow: { flexGrow: 0, paddingVertical: theme.spacing.md },
-  chipRowContent: { paddingHorizontal: theme.spacing.md, gap: theme.spacing.sm },
-  chip: {
-    paddingHorizontal: 16,
-    paddingVertical: 9,
-    borderRadius: theme.radius.pill,
-    backgroundColor: theme.colors.cardBg,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  chipActive: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
-  chipText: { color: theme.colors.textMuted, fontSize: 13, fontWeight: "700" },
-  chipTextActive: { color: "white" },
-  listContent: { padding: theme.spacing.md, paddingTop: 0 },
-  card: {
-    backgroundColor: theme.colors.cardBg,
-    borderRadius: theme.radius.md,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
-  },
-  numberBadge: {
-    alignSelf: "flex-start",
-    backgroundColor: theme.colors.pageBg,
-    borderRadius: theme.radius.pill,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    marginBottom: 10,
-  },
-  numberText: { fontSize: 11, color: theme.colors.accent, fontWeight: "700" },
-  text: { fontSize: 14, color: theme.colors.textMuted, lineHeight: 21 },
-});
+function makeStyles(theme: Theme) {
+  return StyleSheet.create({
+    page: { flex: 1, backgroundColor: theme.colors.pageBg },
+    center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
+    muted: { color: theme.colors.textMuted, textAlign: "center" },
+    chipRow: { flexGrow: 0, paddingVertical: theme.spacing.md },
+    chipRowContent: { paddingHorizontal: theme.spacing.md, gap: theme.spacing.sm },
+    chip: {
+      paddingHorizontal: 16,
+      paddingVertical: 9,
+      borderRadius: theme.radius.pill,
+      backgroundColor: theme.colors.cardBg,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    chipActive: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
+    chipText: { color: theme.colors.textMuted, fontSize: 13, fontWeight: "700" },
+    chipTextActive: { color: "white" },
+    listContent: { padding: theme.spacing.md, paddingTop: 0 },
+    card: {
+      backgroundColor: theme.colors.cardBg,
+      borderRadius: theme.radius.md,
+      padding: theme.spacing.md,
+      marginBottom: theme.spacing.sm,
+    },
+    numberBadge: {
+      alignSelf: "flex-start",
+      backgroundColor: theme.colors.pageBg,
+      borderRadius: theme.radius.pill,
+      paddingHorizontal: 10,
+      paddingVertical: 3,
+      marginBottom: 10,
+    },
+    numberText: { fontSize: 11, color: theme.colors.accent, fontWeight: "700" },
+    text: { fontSize: 14, color: theme.colors.textMuted, lineHeight: 21 },
+  });
+}

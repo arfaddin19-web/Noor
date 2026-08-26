@@ -8,7 +8,9 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { theme } from "../theme";
+import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "../lib/ThemeContext";
+import type { Theme } from "../theme";
 
 export interface SelectOption {
   key: string;
@@ -33,6 +35,8 @@ export default function SelectModal({
   onSelect: (option: SelectOption) => void;
   disabled?: boolean;
 }) {
+  const theme = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
 
@@ -55,7 +59,7 @@ export default function SelectModal({
         <Text style={value ? styles.fieldText : styles.fieldPlaceholder}>
           {value?.label ?? placeholder}
         </Text>
-        <Text style={styles.chevron}>▾</Text>
+        <Ionicons name="chevron-down" size={16} color={theme.colors.textOnDarkMuted} />
       </TouchableOpacity>
 
       <Modal visible={open} animationType="slide" onRequestClose={() => setOpen(false)}>
@@ -70,6 +74,7 @@ export default function SelectModal({
             value={query}
             onChangeText={setQuery}
             placeholder="Search…"
+            placeholderTextColor={theme.colors.textMuted}
             style={styles.search}
             autoFocus
           />
@@ -97,7 +102,8 @@ export default function SelectModal({
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(theme: Theme) {
+  return StyleSheet.create({
   label: { fontSize: 13, fontWeight: "600", color: theme.colors.textOnDarkMuted, marginBottom: 6 },
   field: {
     flexDirection: "row",
@@ -113,7 +119,6 @@ const styles = StyleSheet.create({
   fieldDisabled: { opacity: 0.5 },
   fieldText: { color: theme.colors.textOnDark, fontSize: 15, fontWeight: "600" },
   fieldPlaceholder: { color: theme.colors.textOnDarkMuted, fontSize: 15 },
-  chevron: { color: theme.colors.textOnDarkMuted, fontSize: 14 },
   modal: { flex: 1, backgroundColor: theme.colors.pageBg, paddingTop: 60 },
   modalHeader: {
     flexDirection: "row",
@@ -132,7 +137,8 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.md,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    backgroundColor: "white",
+    backgroundColor: theme.colors.cardBg,
+    color: theme.colors.textPrimary,
   },
   empty: { textAlign: "center", color: theme.colors.textMuted, marginTop: 40 },
   option: {
@@ -143,4 +149,5 @@ const styles = StyleSheet.create({
   },
   optionLabel: { fontSize: 15, fontWeight: "600", color: theme.colors.textPrimary },
   optionSublabel: { fontSize: 12, color: theme.colors.textMuted, marginTop: 2 },
-});
+  });
+}

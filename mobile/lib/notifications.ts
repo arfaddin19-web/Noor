@@ -6,27 +6,38 @@ import { supabase } from "./supabase";
 import { Location, PrayerTime, PRAYER_LABELS } from "./types";
 
 const STORAGE_KEY = "noor.notificationsEnabled";
+const SOUND_KEY = "noor.adhanSoundEnabled";
 const DAYS_AHEAD = 7;
 
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
+  handleNotification: async () => {
+    const soundEnabled = (await AsyncStorage.getItem(SOUND_KEY)) !== "false";
+    return {
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: soundEnabled,
+      shouldSetBadge: false,
+    };
+  },
 });
 
 function daysInMonth(year: number, month: number): number {
   return new Date(year, month, 0).getDate();
 }
 
+async function getAdhanSoundEnabled(): Promise<boolean> {
+  const v = await AsyncStorage.getItem(SOUND_KEY);
+  return v !== "false"; // default on
+}
+
 /** Schedules a local notification for each remaining Fajr/Dhuhr/Asr/Maghrib/Isha
  *  Adhan over the next `DAYS_AHEAD` days at the default location. Cancels any
  *  previously scheduled prayer notifications first, so this is safe to call
- *  repeatedly (e.g. once per app open) without piling up duplicates. */
+ *  repeatedly (e.g. once per app open, or when the sound preference changes)
+ *  without piling up duplicates. */
 export async function scheduleUpcomingPrayerNotifications(): Promise<void> {
   await Notifications.cancelAllScheduledNotificationsAsync();
+  const soundEnabled = await getAdhanSoundEnabled();
 
   const { data: location } = await supabase
     .from("locations")
@@ -76,7 +87,7 @@ export async function scheduleUpcomingPrayerNotifications(): Promise<void> {
         content: {
           title: `${label} time`,
           body: `It's time for ${label} prayer.`,
-          sound: true,
+          sound: soundEnabled,
         },
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.DATE,
@@ -117,6 +128,32 @@ export function useNotificationSettings() {
     }
     setEnabled(next);
     await AsyncStorage.setItem(STORAGE_KEY, String(next));
+  }, []);
+
+  return { enabled, loading, toggle };
+}
+
+/** Whether the Adhan notification should play a sound (vs. a silent banner).
+ *  Only matters while prayer notifications themselves are enabled. */
+export function useAdhanSoundSetting() {
+  const [enabled, setEnabled] = useState(true);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    AsyncStorage.getItem(SOUND_KEY).then((v) => {
+      setEnabled(v !== "false");
+      setLoading(false);
+    });
+  }, []);
+
+  const toggle = useCallback(async (next: boolean) => {
+    setEnabled(next);
+    await AsyncStorage.setItem(SOUND_KEY, String(next));
+    // Re-schedule so any already-queued notifications pick up the new sound
+    // preference; a no-op (harmless) if notifications are currently disabled,
+    // since it just re-cancels+re-adds nothing meaningful shows up.
+    const notifsOn = (await AsyncStorage.getItem(STORAGE_KEY)) === "true";
+    if (notifsOn) await scheduleUpcomingPrayerNotifications();
   }, []);
 
   return { enabled, loading, toggle };

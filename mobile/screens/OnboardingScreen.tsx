@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import {
   Dimensions,
   NativeScrollEvent,
@@ -11,7 +11,8 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import MosqueSkyline from "../components/MosqueSkyline";
-import { theme } from "../theme";
+import { useTheme } from "../lib/ThemeContext";
+import type { Theme } from "../theme";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -32,6 +33,8 @@ const SLIDES = [
 ];
 
 export default function OnboardingScreen({ onDone }: { onDone: () => void }) {
+  const theme = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const [page, setPage] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
 
@@ -103,7 +106,8 @@ export default function OnboardingScreen({ onDone }: { onDone: () => void }) {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(theme: Theme) {
+  return StyleSheet.create({
   flex: { flex: 1 },
   skipRow: { paddingTop: 56, paddingHorizontal: 24, alignItems: "flex-end", height: 90 },
   skipText: { color: theme.colors.textOnDarkMuted, fontSize: 14, fontWeight: "600" },
@@ -161,4 +165,5 @@ const styles = StyleSheet.create({
     right: 0,
     paddingHorizontal: 12,
   },
-});
+  });
+}

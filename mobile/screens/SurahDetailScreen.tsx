@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, FlatList, StyleSheet, Text, View } from "react-native";
 import type { RouteProp } from "@react-navigation/native";
 import { useRoute } from "@react-navigation/native";
@@ -6,7 +6,8 @@ import type { HomeStackParamList } from "../App";
 import AyahCard from "../components/AyahCard";
 import TranslationToggleBar from "../components/TranslationToggleBar";
 import { saveLastRead } from "../lib/quranProgress";
-import { theme } from "../theme";
+import { useTheme } from "../lib/ThemeContext";
+import type { Theme } from "../theme";
 
 interface Ayah {
   numberInSurah: number;
@@ -16,6 +17,8 @@ interface Ayah {
 type SurahRoute = RouteProp<HomeStackParamList, "SurahDetail">;
 
 export default function SurahDetailScreen() {
+  const theme = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const { params } = useRoute<SurahRoute>();
   const [arabic, setArabic] = useState<Ayah[]>([]);
   const [translation, setTranslation] = useState<Ayah[]>([]);
@@ -76,9 +79,11 @@ export default function SurahDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: theme.colors.pageBg },
-  center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
-  muted: { color: theme.colors.textMuted, textAlign: "center" },
-  listContent: { padding: theme.spacing.md },
-});
+function makeStyles(theme: Theme) {
+  return StyleSheet.create({
+    page: { flex: 1, backgroundColor: theme.colors.pageBg },
+    center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24, backgroundColor: theme.colors.pageBg },
+    muted: { color: theme.colors.textMuted, textAlign: "center" },
+    listContent: { padding: theme.spacing.md },
+  });
+}

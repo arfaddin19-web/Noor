@@ -6,7 +6,8 @@ import type { HomeStackParamList } from "../App";
 import AyahCard from "../components/AyahCard";
 import TranslationToggleBar from "../components/TranslationToggleBar";
 import { saveLastRead } from "../lib/quranProgress";
-import { theme } from "../theme";
+import { useTheme } from "../lib/ThemeContext";
+import type { Theme } from "../theme";
 
 interface JuzAyah {
   numberInSurah: number;
@@ -17,6 +18,8 @@ interface JuzAyah {
 type JuzRoute = RouteProp<HomeStackParamList, "JuzDetail">;
 
 export default function JuzDetailScreen() {
+  const theme = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const { params } = useRoute<JuzRoute>();
   const [arabic, setArabic] = useState<JuzAyah[]>([]);
   const [translation, setTranslation] = useState<JuzAyah[]>([]);
@@ -96,22 +99,24 @@ export default function JuzDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: theme.colors.pageBg },
-  center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
-  muted: { color: theme.colors.textMuted, textAlign: "center" },
-  listContent: { padding: theme.spacing.md },
-  surahHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: theme.colors.accent,
-    borderRadius: theme.radius.md,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: 10,
-    marginBottom: theme.spacing.sm,
-    marginTop: theme.spacing.xs,
-  },
-  surahHeaderText: { color: "white", fontWeight: "700", fontSize: 14 },
-  surahHeaderArabic: { color: "white", fontSize: 16 },
-});
+function makeStyles(theme: Theme) {
+  return StyleSheet.create({
+    page: { flex: 1, backgroundColor: theme.colors.pageBg },
+    center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24, backgroundColor: theme.colors.pageBg },
+    muted: { color: theme.colors.textMuted, textAlign: "center" },
+    listContent: { padding: theme.spacing.md },
+    surahHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      backgroundColor: theme.colors.accent,
+      borderRadius: theme.radius.md,
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: 10,
+      marginBottom: theme.spacing.sm,
+      marginTop: theme.spacing.xs,
+    },
+    surahHeaderText: { color: "white", fontWeight: "700", fontSize: 14 },
+    surahHeaderArabic: { color: "white", fontSize: 16 },
+  });
+}

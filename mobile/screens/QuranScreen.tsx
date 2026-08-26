@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -7,12 +7,14 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { HomeStackParamList } from "../App";
 import StarBadge from "../components/StarBadge";
 import { getLastRead, LastRead } from "../lib/quranProgress";
-import { theme } from "../theme";
+import { useTheme } from "../lib/ThemeContext";
+import type { Theme } from "../theme";
 
 interface Surah {
   number: number;
@@ -30,6 +32,8 @@ const JUZ_NUMBERS = Array.from({ length: 30 }, (_, i) => i + 1);
 const PAGE_NUMBERS = Array.from({ length: 604 }, (_, i) => i + 1);
 
 export default function QuranScreen() {
+  const theme = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const [mode, setMode] = useState<Mode>("surah");
   const [surahs, setSurahs] = useState<Surah[]>([]);
   const [lastRead, setLastRead] = useState<LastRead | null>(null);
@@ -71,7 +75,7 @@ export default function QuranScreen() {
             <Text style={styles.lastReadLabel}>Last Read</Text>
             <Text style={styles.lastReadTitle}>{lastRead.label}</Text>
           </View>
-          <Text style={styles.lastReadIcon}>📖</Text>
+          <Ionicons name="book-outline" size={22} color={theme.colors.accent} style={{ opacity: 0.6 }} />
         </TouchableOpacity>
       )}
 
@@ -163,59 +167,60 @@ export default function QuranScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: theme.colors.pageBg },
-  center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
-  muted: { color: theme.colors.textMuted, textAlign: "center" },
-  lastReadCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.cardBg,
-    borderRadius: theme.radius.lg,
-    padding: theme.spacing.md,
-    margin: theme.spacing.md,
-    marginBottom: 0,
-  },
-  lastReadLabel: { fontSize: 11, color: theme.colors.textMuted, fontWeight: "700" },
-  lastReadTitle: { fontSize: 17, fontWeight: "800", color: theme.colors.textPrimary, marginTop: 2 },
-  lastReadIcon: { fontSize: 22, opacity: 0.35 },
-  toggleRow: {
-    flexDirection: "row",
-    paddingHorizontal: theme.spacing.md,
-    marginTop: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  toggleTab: { paddingVertical: 12, marginRight: 28, alignItems: "center" },
-  toggleText: { fontSize: 14, fontWeight: "700", color: theme.colors.textMuted },
-  toggleTextActive: { color: theme.colors.accent },
-  toggleUnderline: {
-    marginTop: 8,
-    height: 3,
-    width: 28,
-    borderRadius: 2,
-    backgroundColor: theme.colors.accent,
-  },
-  listContent: { padding: theme.spacing.md, gap: theme.spacing.sm },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.cardBg,
-    borderRadius: theme.radius.md,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: 14,
-  },
-  name: { fontSize: 16, fontWeight: "700", color: theme.colors.textPrimary },
-  subtitle: { fontSize: 12, color: theme.colors.textMuted, marginTop: 2 },
-  revelation: { fontSize: 12, color: theme.colors.textMuted, fontWeight: "600" },
-  pageTile: {
-    flex: 1,
-    margin: 5,
-    aspectRatio: 1,
-    backgroundColor: theme.colors.cardBg,
-    borderRadius: theme.radius.md,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  pageTileText: { fontSize: 14, fontWeight: "700", color: theme.colors.accent },
-});
+function makeStyles(theme: Theme) {
+  return StyleSheet.create({
+    page: { flex: 1, backgroundColor: theme.colors.pageBg },
+    center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
+    muted: { color: theme.colors.textMuted, textAlign: "center" },
+    lastReadCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: theme.colors.cardBg,
+      borderRadius: theme.radius.lg,
+      padding: theme.spacing.md,
+      margin: theme.spacing.md,
+      marginBottom: 0,
+    },
+    lastReadLabel: { fontSize: 11, color: theme.colors.textMuted, fontWeight: "700" },
+    lastReadTitle: { fontSize: 17, fontWeight: "800", color: theme.colors.textPrimary, marginTop: 2 },
+    toggleRow: {
+      flexDirection: "row",
+      paddingHorizontal: theme.spacing.md,
+      marginTop: theme.spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+    },
+    toggleTab: { paddingVertical: 12, marginRight: 28, alignItems: "center" },
+    toggleText: { fontSize: 14, fontWeight: "700", color: theme.colors.textMuted },
+    toggleTextActive: { color: theme.colors.accent },
+    toggleUnderline: {
+      marginTop: 8,
+      height: 3,
+      width: 28,
+      borderRadius: 2,
+      backgroundColor: theme.colors.accent,
+    },
+    listContent: { padding: theme.spacing.md, gap: theme.spacing.sm },
+    row: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: theme.colors.cardBg,
+      borderRadius: theme.radius.md,
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: 14,
+    },
+    name: { fontSize: 16, fontWeight: "700", color: theme.colors.textPrimary },
+    subtitle: { fontSize: 12, color: theme.colors.textMuted, marginTop: 2 },
+    revelation: { fontSize: 12, color: theme.colors.textMuted, fontWeight: "600" },
+    pageTile: {
+      flex: 1,
+      margin: 5,
+      aspectRatio: 1,
+      backgroundColor: theme.colors.cardBg,
+      borderRadius: theme.radius.md,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    pageTileText: { fontSize: 14, fontWeight: "700", color: theme.colors.accent },
+  });
+}

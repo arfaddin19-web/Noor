@@ -1,25 +1,25 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../lib/useAuth";
-import { useNotificationSettings } from "../lib/notifications";
 import { getHomeCity, getHomeMasjidId } from "../lib/homeMasjid";
-import { rootNavigate } from "../lib/navigationRef";
-import { theme } from "../theme";
+import { rootNavigate, goToHomeStackScreen } from "../lib/navigationRef";
+import { useTheme } from "../lib/ThemeContext";
+import type { Theme } from "../theme";
 
-function YourMasjidCard() {
+function YourMasjidCard({ theme, styles }: { theme: Theme; styles: ReturnType<typeof makeStyles> }) {
   const [loading, setLoading] = useState(true);
   const [city, setCity] = useState<string | null>(null);
   const [masjidName, setMasjidName] = useState<string | null>(null);
@@ -52,9 +52,12 @@ function YourMasjidCard() {
 
   return (
     <View style={styles.card}>
-      <Text style={styles.cardTitle}>Your Masjid</Text>
+      <View style={styles.cardIconRow}>
+        <Ionicons name="business-outline" size={18} color={theme.colors.accent} />
+        <Text style={styles.cardTitle}>Your Masjid</Text>
+      </View>
       {loading ? (
-        <ActivityIndicator style={{ marginTop: 8 }} />
+        <ActivityIndicator style={{ marginTop: 8 }} color={theme.colors.accent} />
       ) : (
         <Text style={styles.cardSubtitle}>
           {masjidName ? `${masjidName}${city ? ` — ${city}` : ""}` : "Not set yet"}
@@ -70,7 +73,7 @@ function YourMasjidCard() {
   );
 }
 
-function AuthForm() {
+function AuthForm({ theme, styles }: { theme: Theme; styles: ReturnType<typeof makeStyles> }) {
   const [mode, setMode] = useState<"signIn" | "signUp">("signIn");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -112,6 +115,7 @@ function AuthForm() {
         {mode === "signUp" && (
           <TextInput
             placeholder="Full name"
+            placeholderTextColor={theme.colors.textMuted}
             value={fullName}
             onChangeText={setFullName}
             style={styles.input}
@@ -119,6 +123,7 @@ function AuthForm() {
         )}
         <TextInput
           placeholder="Email"
+          placeholderTextColor={theme.colors.textMuted}
           autoCapitalize="none"
           keyboardType="email-address"
           value={email}
@@ -127,6 +132,7 @@ function AuthForm() {
         />
         <TextInput
           placeholder="Password"
+          placeholderTextColor={theme.colors.textMuted}
           secureTextEntry
           value={password}
           onChangeText={setPassword}
@@ -161,9 +167,15 @@ function AuthForm() {
   );
 }
 
-function ProfileView({ profile }: { profile: { full_name: string | null } }) {
-  const { enabled, loading, toggle } = useNotificationSettings();
-
+function ProfileView({
+  profile,
+  theme,
+  styles,
+}: {
+  profile: { full_name: string | null };
+  theme: Theme;
+  styles: ReturnType<typeof makeStyles>;
+}) {
   async function signOut() {
     await supabase.auth.signOut();
   }
@@ -179,23 +191,8 @@ function ProfileView({ profile }: { profile: { full_name: string | null } }) {
         <Text style={styles.cardTitle}>{profile.full_name ?? "Assalamu alaikum"}</Text>
       </View>
 
-      <View style={styles.card}>
-        <View style={styles.settingRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.settingLabel}>Prayer time reminders</Text>
-            <Text style={styles.settingSubtitle}>
-              Get a notification at each Adhan time today.
-            </Text>
-          </View>
-          {loading ? (
-            <ActivityIndicator />
-          ) : (
-            <Switch value={enabled} onValueChange={toggle} />
-          )}
-        </View>
-      </View>
-
       <TouchableOpacity style={styles.signOutButton} onPress={signOut}>
+        <Ionicons name="log-out-outline" size={16} color={theme.colors.danger} />
         <Text style={styles.signOutText}>Sign out</Text>
       </TouchableOpacity>
     </View>
@@ -203,76 +200,100 @@ function ProfileView({ profile }: { profile: { full_name: string | null } }) {
 }
 
 export default function AccountScreen() {
+  const theme = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const { loading, session, profile } = useAuth();
 
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator />
+        <ActivityIndicator color={theme.colors.accent} />
       </View>
     );
   }
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <YourMasjidCard />
+      <YourMasjidCard theme={theme} styles={styles} />
+
+      <TouchableOpacity
+        style={[styles.card, styles.settingsCard]}
+        onPress={() => goToHomeStackScreen("Settings")}
+      >
+        <View style={styles.cardIconRow}>
+          <Ionicons name="settings-outline" size={18} color={theme.colors.accent} />
+          <Text style={styles.cardTitle}>Settings</Text>
+        </View>
+        <Text style={styles.cardSubtitle}>
+          Notifications, Adhan sound, and the app's dark/light theme.
+        </Text>
+      </TouchableOpacity>
+
       {session && profile ? (
-        <ProfileView profile={profile} />
+        <ProfileView profile={profile} theme={theme} styles={styles} />
       ) : (
-        <AuthForm />
+        <AuthForm theme={theme} styles={styles} />
       )}
     </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { padding: theme.spacing.md, backgroundColor: theme.colors.pageBg, flexGrow: 1 },
-  center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  card: {
-    ...theme.cardShadow,
-    backgroundColor: theme.colors.cardBg,
-    borderRadius: theme.radius.lg,
-    padding: theme.spacing.lg,
-    marginBottom: theme.spacing.md,
-    alignItems: "flex-start",
-  },
-  cardTitle: { fontSize: 17, fontWeight: "700", color: theme.colors.textPrimary },
-  cardSubtitle: { fontSize: 13, color: theme.colors.textMuted, marginTop: 4, marginBottom: 14 },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: theme.colors.accent,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 10,
-  },
-  avatarText: { color: "white", fontSize: 20, fontWeight: "700" },
-  input: {
-    width: "100%",
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    marginBottom: 10,
-    fontSize: 14,
-    backgroundColor: theme.colors.pageBg,
-  },
-  error: { color: "#dc2626", fontSize: 13, marginBottom: 10 },
-  notice: { color: theme.colors.accent, fontSize: 13, marginBottom: 10 },
-  primaryButton: {
-    width: "100%",
-    backgroundColor: theme.colors.accent,
-    borderRadius: theme.radius.md,
-    paddingVertical: 13,
-    alignItems: "center",
-  },
-  primaryButtonText: { color: "white", fontWeight: "700", fontSize: 15 },
-  switchModeText: { color: theme.colors.accent, fontSize: 13, fontWeight: "700" },
-  settingRow: { flexDirection: "row", alignItems: "center", width: "100%" },
-  settingLabel: { fontSize: 15, fontWeight: "600", color: theme.colors.textPrimary },
-  settingSubtitle: { fontSize: 12, color: theme.colors.textMuted, marginTop: 2 },
-  signOutButton: { alignItems: "center", paddingVertical: 12 },
-  signOutText: { color: "#dc2626", fontWeight: "700" },
-});
+function makeStyles(theme: Theme) {
+  return StyleSheet.create({
+    container: { padding: theme.spacing.md, backgroundColor: theme.colors.pageBg, flexGrow: 1 },
+    center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: theme.colors.pageBg },
+    card: {
+      ...theme.cardShadow,
+      backgroundColor: theme.colors.cardBg,
+      borderRadius: theme.radius.lg,
+      padding: theme.spacing.lg,
+      marginBottom: theme.spacing.md,
+      alignItems: "flex-start",
+    },
+    settingsCard: { width: "100%" },
+    cardIconRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 2 },
+    cardTitle: { fontSize: 17, fontWeight: "700", color: theme.colors.textPrimary },
+    cardSubtitle: { fontSize: 13, color: theme.colors.textMuted, marginTop: 4, marginBottom: 14 },
+    avatar: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: theme.colors.accent,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 10,
+    },
+    avatarText: { color: "white", fontSize: 20, fontWeight: "700" },
+    input: {
+      width: "100%",
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: theme.radius.md,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      marginBottom: 10,
+      fontSize: 14,
+      backgroundColor: theme.colors.pageBg,
+      color: theme.colors.textPrimary,
+    },
+    error: { color: theme.colors.danger, fontSize: 13, marginBottom: 10 },
+    notice: { color: theme.colors.accent, fontSize: 13, marginBottom: 10 },
+    primaryButton: {
+      width: "100%",
+      backgroundColor: theme.colors.accent,
+      borderRadius: theme.radius.md,
+      paddingVertical: 13,
+      alignItems: "center",
+    },
+    primaryButtonText: { color: "white", fontWeight: "700", fontSize: 15 },
+    switchModeText: { color: theme.colors.accent, fontSize: 13, fontWeight: "700" },
+    signOutButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+      paddingVertical: 12,
+    },
+    signOutText: { color: theme.colors.danger, fontWeight: "700" },
+  });
+}

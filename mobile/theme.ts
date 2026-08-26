@@ -1,67 +1,135 @@
-/** Noor design tokens — used by the "hero" screens (Onboarding, Home, Masjid Detail,
- *  Qibla) that adopt the deep-emerald / frosted-glass look from the reference designs. */
+/** Noor design tokens. Two palettes — "dark" (deep emerald, the app's default look)
+ *  and "light" — sharing the same shape, so every screen can call `useTheme()` and
+ *  restyle instantly when the user flips the Dark theme setting. */
 
-export const theme = {
-  colors: {
-    // Deep emerald-green gradient, matching the reference mockups' mosque-illustration hero.
-    skyTop: "#1e5c47",
-    skyMid: "#134536",
-    skyBottom: "#0a2620",
+export interface ThemeColors {
+  // Hero gradient (Home/Onboarding/Masjid Setup) + mosque skyline
+  skyTop: string;
+  skyMid: string;
+  skyBottom: string;
+  skyline: string;
+  skylineDark: string;
+  moon: string;
 
-    skyline: "#0f3a2d", // mosque silhouette
-    skylineDark: "#082019",
+  // Frosted glass cards over the hero
+  glass: string;
+  glassBorder: string;
+  glassStrong: string;
 
-    moon: "#f4ecd8",
+  textOnDark: string;
+  textOnDarkMuted: string;
 
-    // Frosted glass cards over the hero
-    glass: "rgba(255,255,255,0.14)",
-    glassBorder: "rgba(255,255,255,0.22)",
-    glassStrong: "rgba(255,255,255,0.22)",
+  gold: string;
+  accent: string;
+  accentDark: string;
+  danger: string;
 
-    textOnDark: "#fbf7ee",
-    textOnDarkMuted: "rgba(251,247,238,0.7)",
+  // Icon grid tile colors (soft, varied)
+  tile1: string;
+  tile2: string;
+  tile3: string;
+  tile4: string;
+  tile5: string;
+  tile6: string;
+  tile7: string;
+  tile8: string;
 
-    gold: "#e0b877",
-    accent: "#0e8a72", // brand green, used for CTAs/active states everywhere
-    accentDark: "#095a4a",
+  cardBg: string;
+  pageBg: string;
+  textPrimary: string;
+  textMuted: string;
+  border: string;
+}
 
-    // Icon grid tile colors (soft, varied — like the reference's colorful icon set)
-    tile1: "#f4a97a", // Qibla
-    tile2: "#7ec9b7", // Qur'an
-    tile3: "#f2c265", // Hadith
-    tile4: "#8fb7e8", // Nearby
-    tile5: "#e39ab0", // Ask
-    tile6: "#a690e0", // Account
-    tile7: "#8fd6c4", // Tasbih
-
-    cardBg: "#ffffff",
-    pageBg: "#eef7f2", // light mint, matching the reference's content-screen background
-    textPrimary: "#0f2b22",
-    textMuted: "#5b7a6f",
-    border: "#dcece5",
-  },
-  radius: {
-    md: 14,
-    lg: 20,
-    xl: 28,
-    pill: 999,
-  },
-  spacing: {
-    xs: 4,
-    sm: 8,
-    md: 16,
-    lg: 20,
-    xl: 28,
-  },
-  // A single soft-elevation style used on every card/button across the app, so
-  // nothing reads as a flat, unstyled block. Spread this into a style array.
+export interface Theme {
+  mode: "light" | "dark";
+  colors: ThemeColors;
+  radius: { md: number; lg: number; xl: number; pill: number };
+  spacing: { xs: number; sm: number; md: number; lg: number; xl: number };
   cardShadow: {
-    shadowColor: "#0a2620",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 2,
-  },
+    shadowColor: string;
+    shadowOffset: { width: number; height: number };
+    shadowOpacity: number;
+    shadowRadius: number;
+    elevation: number;
+  };
+}
+
+const radius = { md: 14, lg: 20, xl: 28, pill: 999 };
+const spacing = { xs: 4, sm: 8, md: 16, lg: 20, xl: 28 };
+
+// Colors shared by both palettes — the emerald hero, gold accents, and the
+// icon-grid tile colors stay the same whether the rest of the app is light or dark.
+const shared = {
+  skyTop: "#1e5c47",
+  skyMid: "#134536",
+  skyBottom: "#0a2620",
+  skyline: "#0f3a2d",
+  skylineDark: "#082019",
+  moon: "#f4ecd8",
+
+  glass: "rgba(255,255,255,0.14)",
+  glassBorder: "rgba(255,255,255,0.22)",
+  glassStrong: "rgba(255,255,255,0.22)",
+
+  textOnDark: "#fbf7ee",
+  textOnDarkMuted: "rgba(251,247,238,0.7)",
+
+  gold: "#e0b877",
+  accent: "#12a186",
+  accentDark: "#095a4a",
+  danger: "#e5626a",
+
+  tile1: "#f4a97a", // Qibla
+  tile2: "#7ec9b7", // Qur'an
+  tile3: "#f2c265", // Hadith
+  tile4: "#8fb7e8", // Halal Food
+  tile5: "#e39ab0", // Ask
+  tile6: "#a690e0", // Account
+  tile7: "#8fd6c4", // Tasbih
+  tile8: "#f0a5a5", // Donate / Masjids / Dua / Settings (reused across the wider grid)
 };
 
-export type Theme = typeof theme;
+const darkColors: ThemeColors = {
+  ...shared,
+  cardBg: "#123d30",
+  pageBg: "#081c17",
+  textPrimary: "#f4efe3",
+  textMuted: "rgba(244,239,227,0.64)",
+  border: "rgba(255,255,255,0.10)",
+};
+
+const lightColors: ThemeColors = {
+  ...shared,
+  cardBg: "#ffffff",
+  pageBg: "#eef7f2",
+  textPrimary: "#0f2b22",
+  textMuted: "#5b7a6f",
+  border: "#dcece5",
+};
+
+const darkShadow = {
+  shadowColor: "#000000",
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.4,
+  shadowRadius: 12,
+  elevation: 4,
+};
+
+const lightShadow = {
+  shadowColor: "#0a2620",
+  shadowOffset: { width: 0, height: 3 },
+  shadowOpacity: 0.08,
+  shadowRadius: 10,
+  elevation: 2,
+};
+
+export function getTheme(mode: "light" | "dark"): Theme {
+  return {
+    mode,
+    colors: mode === "dark" ? darkColors : lightColors,
+    radius,
+    spacing,
+    cardShadow: mode === "dark" ? darkShadow : lightShadow,
+  };
+}

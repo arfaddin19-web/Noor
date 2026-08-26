@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   StyleSheet,
@@ -14,12 +14,15 @@ import { supabase } from "../lib/supabase";
 import { Masjid } from "../lib/types";
 import { getHomeCity, getHomeMasjidId, saveHomeMasjid } from "../lib/homeMasjid";
 import SelectModal, { SelectOption } from "../components/SelectModal";
-import { theme } from "../theme";
+import { useTheme } from "../lib/ThemeContext";
+import type { Theme } from "../theme";
 
 type Nav = NativeStackNavigationProp<RootStackParamList, "MasjidSetup">;
 type Route = RouteProp<RootStackParamList, "MasjidSetup">;
 
 export default function MasjidSetupScreen() {
+  const theme = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const navigation = useNavigation<Nav>();
   const { params } = useRoute<Route>();
   const standalone = params?.standalone ?? false;
@@ -128,7 +131,8 @@ export default function MasjidSetupScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(theme: Theme) {
+  return StyleSheet.create({
   flex: { flex: 1 },
   content: { flex: 1, paddingHorizontal: 24, paddingTop: 80, alignItems: "center" },
   title: { fontSize: 24, fontWeight: "700", color: theme.colors.textOnDark, textAlign: "center" },
@@ -151,4 +155,5 @@ const styles = StyleSheet.create({
   ctaDisabled: { opacity: 0.4 },
   ctaText: { color: "white", fontWeight: "700", fontSize: 15 },
   skipText: { color: theme.colors.textOnDarkMuted, fontWeight: "600", fontSize: 13 },
-});
+  });
+}
