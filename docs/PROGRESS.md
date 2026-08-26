@@ -167,14 +167,16 @@ up correctly in the mobile app.
   - **Ask**: AI Q&A chat UI wired to and verified working against the deployed
     `ask-ai` Supabase Edge Function (see below).
   - **Account**: sign-up is now **phone-number-based** — full name, phone, city,
-    gender, and a password, instead of an email. Supabase's email/password auth is
-    reused underneath via a synthetic `{phone}@noor.local` address (no real email is
-    sent or needed), so the phone number itself becomes the account identifier. *Not
-    SMS-verified* — no OTP/SMS provider is configured (that's a paid Supabase
-    integration), so this trades phone verification for working today at no cost; real
-    verification could be added later if it's worth the per-message cost. City/gender
-    feed the admin dashboard's new population stats. Plus "Your Masjid" picker, profile,
-    sign out.
+    gender, and a password, instead of an email. Uses Supabase's **native `phone`
+    field** on sign-up/sign-in (an earlier version faked an email address like
+    `{phone}@noor.local`, but Supabase's Auth server rejected it outright — `.local`
+    is an IETF-reserved special-use domain its email validator refuses on sight —
+    fixed by switching to the real `phone` field, which is the officially supported
+    way to do phone+password auth). *Not SMS-verified* — no OTP/SMS provider is
+    configured (that's a paid Supabase integration), so this trades phone verification
+    for working today at no cost; real verification could be added later if it's worth
+    the per-message cost. City/gender feed the admin dashboard's new population stats.
+    Plus "Your Masjid" picker, profile, sign out.
   - Navigation is now **4 bottom tabs — Home / Ask / Settings / Account** — with
     everything else (Qibla, Qur'an, Books & Hadith, Tasbih, Dua, Donate, Islamic
     Calendar, Community Help, Masjids, Halal Food) reached via Home's icon grid/stack.
@@ -259,10 +261,11 @@ Worth keeping in mind if something looks broken again:
   auth, which costs per message and needs the user to sign up for one (e.g. Twilio).
   Worth doing if the population data needs to be trustworthy, not just self-reported.
   No Google or other social sign-in is wired up either; could be added later.
-- If the Supabase project still has "Confirm email" turned on (Authentication → Sign
-  In / Providers → Email in the Supabase Dashboard), new phone accounts will be created
-  but can't sign in until that's turned off — there's no real email behind a phone
-  sign-up for a confirmation link to go to.
+- **Two Supabase Dashboard steps needed for phone sign-up to work**: (1) Authentication
+  → Providers → Phone → enable the Phone provider (it's off by default); (2) with it
+  enabled, turn off "Confirm phone" for that provider — otherwise Supabase expects an
+  SMS OTP code to confirm the account, and no SMS provider is wired up so that code can
+  never be sent. Without both, new phone accounts will be created but can't sign in.
 - **Arabic font**: the user's reference image arrived and turned out to be the King
   Fahd Complex "Uthmanic Hafs" typeface, which is non-commercial-use-only licensed —
   Amiri Quran (free, OFL) is used instead as the closest legal match; see above for

@@ -17,7 +17,7 @@ import { supabase } from "../lib/supabase";
 import { useAuth } from "../lib/useAuth";
 import { getHomeCity, getHomeMasjidId } from "../lib/homeMasjid";
 import { rootNavigate } from "../lib/navigationRef";
-import { isValidPhone, normalizePhone, phoneToSyntheticEmail } from "../lib/phoneAuth";
+import { isValidPhone, normalizePhone } from "../lib/phoneAuth";
 import { useTheme } from "../lib/ThemeContext";
 import type { Theme } from "../theme";
 
@@ -102,19 +102,18 @@ function AuthForm({ theme, styles }: { theme: Theme; styles: ReturnType<typeof m
     }
 
     setLoading(true);
-    const syntheticEmail = phoneToSyntheticEmail(phone);
+    const normalizedPhone = normalizePhone(phone);
 
     if (mode === "signIn") {
-      const { error } = await supabase.auth.signInWithPassword({ email: syntheticEmail, password });
+      const { error } = await supabase.auth.signInWithPassword({ phone: normalizedPhone, password });
       if (error) setError("Couldn't sign in — check your phone number and password.");
     } else {
       const { data, error } = await supabase.auth.signUp({
-        email: syntheticEmail,
+        phone: normalizedPhone,
         password,
         options: {
           data: {
             full_name: fullName.trim(),
-            phone: normalizePhone(phone),
             city: city.trim() || null,
             gender,
           },
@@ -122,18 +121,19 @@ function AuthForm({ theme, styles }: { theme: Theme; styles: ReturnType<typeof m
       });
       if (error) {
         setError(
-          error.message.includes("already registered")
+          error.message.includes("already registered") || error.message.includes("already exists")
             ? "That phone number is already registered — try signing in instead."
             : error.message
         );
       } else if (data.session) {
         setNotice("Account created — you're signed in.");
       } else {
-        // Supabase's "Confirm email" setting is still on; since there's no real
-        // email behind a phone sign-up, that has to be turned off in the
-        // Supabase Dashboard (Authentication → Sign In / Providers → Email)
-        // for phone accounts to be usable right after signing up.
-        setNotice("Account created, but sign-in is pending email confirmation — ask the app admin to turn that off for phone accounts.");
+        // Supabase's "Confirm phone" setting is still on, which normally
+        // requires an SMS code — since no SMS provider is set up, that has
+        // to be turned off in the Supabase Dashboard (Authentication →
+        // Providers → Phone) for phone accounts to be usable right after
+        // signing up.
+        setNotice("Account created, but sign-in is pending phone confirmation — ask the app admin to turn that off.");
       }
     }
     setLoading(false);
