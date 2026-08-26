@@ -194,7 +194,6 @@ function AppInner() {
   const [initialRoute, setInitialRoute] = useState<keyof RootStackParamList>("Main");
   const [fontsLoaded] = useFonts({
     "UthmanicHafs-Regular": require("./assets/fonts/UthmanicHafs-Regular.otf"),
-    "Amiri-Bold": require("./assets/fonts/Amiri-Bold.ttf"),
   });
 
   useEffect(() => {

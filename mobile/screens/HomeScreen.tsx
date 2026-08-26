@@ -25,8 +25,9 @@ import { getQuranActivityToday } from "../lib/quranProgress";
 import { getTodaySalatChecklist, toggleSalat, SALAT_ORDER, SalatChecklist } from "../lib/salatChecklist";
 import { getActiveNotices, Notice } from "../lib/notices";
 import { getTodayAyahRef } from "../lib/ayahOfDay";
+import { getAyahText, SURAH_NAMES } from "../lib/quranText";
 import { getHadithForDate } from "../lib/hadithOfDay";
-import { useAuth } from "../lib/useAuth";
+import { useRegistration } from "../lib/useRegistration";
 import { useTheme } from "../lib/ThemeContext";
 import { ARABIC_FONT_REGULAR } from "../theme";
 import type { Theme } from "../theme";
@@ -96,7 +97,7 @@ export default function HomeScreen() {
     theme.colors.tile5, theme.colors.tile6, theme.colors.tile7, theme.colors.tile8,
   ];
   const navigation = useNavigation<Nav>();
-  const { profile } = useAuth();
+  const { registration } = useRegistration();
   const [location, setLocation] = useState<Location | null>(null);
   const [today, setToday] = useState<PrayerTime | null>(null);
   const [tomorrow, setTomorrow] = useState<PrayerTime | null>(null);
@@ -189,19 +190,35 @@ export default function HomeScreen() {
   // so it only needs to load once (it's the same all day).
   useEffect(() => {
     const ref = getTodayAyahRef();
-    fetch(`https://api.alquran.cloud/v1/ayah/${ref.surah}:${ref.ayah}/editions/quran-uthmani,en.sahih`)
+    // Arabic text comes from the bundled, font-matched dataset (see
+    // lib/quranText.ts) — only the English translation needs a network call.
+    const arabic = getAyahText(ref.surah, ref.ayah);
+    const surahName = SURAH_NAMES.find((s) => s.number === ref.surah)?.englishName ?? "";
+    if (!arabic) {
+      setAyahOfDay(null);
+      return;
+    }
+    fetch(`https://api.alquran.cloud/v1/ayah/${ref.surah}:${ref.ayah}/en.sahih`)
       .then((r) => r.json())
       .then((json) => {
-        const [arabicEd, enEd] = json.data;
         setAyahOfDay({
-          surahNumber: arabicEd.surah.number,
-          surahEnglishName: arabicEd.surah.englishName,
-          ayahNumber: arabicEd.numberInSurah,
-          arabic: arabicEd.text,
-          translation: enEd.text,
+          surahNumber: ref.surah,
+          surahEnglishName: surahName,
+          ayahNumber: ref.ayah,
+          arabic,
+          translation: json.data.text,
         });
       })
-      .catch(() => setAyahOfDay(null));
+      .catch(() =>
+        // Still show the Arabic verse even if the translation fetch fails.
+        setAyahOfDay({
+          surahNumber: ref.surah,
+          surahEnglishName: surahName,
+          ayahNumber: ref.ayah,
+          arabic,
+          translation: "",
+        })
+      );
   }, []);
 
   useEffect(() => {
@@ -240,7 +257,7 @@ export default function HomeScreen() {
     });
   }
 
-  const firstName = profile?.full_name?.trim().split(/\s+/)[0];
+  const firstName = registration?.full_name?.trim().split(/\s+/)[0];
 
   return (
     <ScreenBackground>

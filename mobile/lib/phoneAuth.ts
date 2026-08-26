@@ -1,27 +1,20 @@
-/** Phone-number sign-up uses Supabase's native `phone` field on
- *  auth.signUp/signInWithPassword (not a synthesized email) — see
- *  git history for why: an earlier version faked an email address like
- *  `${phone}@noor.local`, but Supabase's Auth server rejected it outright
- *  ("invalid format") because `.local` is an IETF-reserved special-use
- *  domain its email validator refuses on sight. Using the real `phone`
- *  field sidesteps that entirely and is the officially supported way to
- *  do phone+password auth.
+/** Phone number formatting/validation, shared by lib/registration.ts.
  *
- *  No SMS/OTP provider is configured (that costs money and needs a paid
- *  provider set up in the Supabase Dashboard), so the phone number is NOT
- *  verified — anyone can type any number, the same way nothing stopped a
- *  fake email address before. It trades verification for being usable
- *  today at no cost. Real phone verification could be added later via an
- *  SMS provider (e.g. Twilio) wired into Supabase's Phone provider, if
- *  it's worth the ongoing per-message cost. */
+ *  This used to back a real Supabase Auth sign-up/sign-in flow (first a
+ *  synthesized email, then Supabase's native phone provider) — both turned
+ *  into repeated friction (the synthesized email was rejected outright by
+ *  Supabase's validator, then the native Phone provider needed a dashboard
+ *  toggle that didn't get switched on). Registration is now just a plain
+ *  `registrations` table row with no password and no Supabase Auth session
+ *  at all (see lib/registration.ts) — this file only normalizes/validates
+ *  the phone number so the same real-world number doesn't create two
+ *  different registration rows depending on how it's typed. */
 
-/** Supabase's Auth server validates phone numbers against E.164 shape:
- *  digits only (no "+"), first digit non-zero, 2-15 digits total. To keep
- *  the same real-world number from creating two different accounts
- *  depending on how someone types it (e.g. "9812345678" vs
- *  "+977 9812345678"), this strips everything down to digits and, for a
- *  bare 10-digit Nepali mobile number (starts with 9), prepends the 977
- *  country code so it's consistently stored the same way either time. */
+const E164_SHAPE = /^[1-9][0-9]{1,14}$/;
+
+/** Strips everything down to digits and, for a bare 10-digit Nepali mobile
+ *  number (starts with 9), prepends the 977 country code — so "9812345678"
+ *  and "+977 9812345678" both normalize to the same stored value. */
 export function normalizePhone(raw: string): string {
   let digits = raw.replace(/[^\d]/g, "");
   if (digits.length === 10 && digits.startsWith("9")) {
@@ -31,6 +24,5 @@ export function normalizePhone(raw: string): string {
 }
 
 export function isValidPhone(raw: string): boolean {
-  const digits = normalizePhone(raw);
-  return /^[1-9][0-9]{1,14}$/.test(digits);
+  return E164_SHAPE.test(normalizePhone(raw));
 }

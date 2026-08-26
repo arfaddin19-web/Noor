@@ -89,13 +89,26 @@ up correctly in the mobile app.
     live map thumbnail and compass-skin picker — decorative/heavy, not core functionality.)
   - **Qur'an list**: "Last Read" hero card (jumps back into whichever Surah/Juz/Page you
     last opened), a **Bookmarks** row (long-press a chip to remove it), a Sura/Page/Juz
-    underline-tab toggle, 8-point star badges on Surah/Juz rows, and a 604-tile Page grid
-    (each page fetched via AlQuran Cloud's `/v1/page/{n}/{edition}`, grouped with
-    surah-name headers).
+    underline-tab toggle, 8-point star badges on Surah/Juz rows, and a 604-tile Page grid.
+  - **Qur'an Arabic text is bundled locally**, not fetched (`lib/quranText.ts`,
+    `assets/quran/verses.json` — all 6,236 verses, ~1.5MB). It used to come from AlQuran
+    Cloud's `quran-uthmani` edition, which turned out to use different Unicode codepoints
+    for the small diacritic/waqf marks than the KFGQPC Uthmanic Hafs font expects —
+    rendering it produced broken glyphs (stray black circles replacing letters) instead of
+    the font's intended ornamental ayah-end circles. Replaced with the QPC v18-matched
+    text (from github.com/thetruetruth/quran-data-kfgqpc, itself sourced from King Fahd
+    Complex's own release), verified to render cleanly. Bonus: the Arabic text no longer
+    depends on a network call at all, only the English translation does — and a failed
+    translation fetch no longer blocks reading the Arabic (it only affects the
+    optional, off-by-default translation block).
   - **Qur'an reader** (Surah/Juz/Page detail): rebuilt as continuous, right-to-left
     flowing **Mushaf-style** text (`components/MushafText.tsx`) — one wrapped paragraph
-    per surah segment with a small inline ﴿١﴾-style Arabic-Indic ayah marker, not boxed
-    per-ayah cards. A custom top bar (`QuranReaderTopBar`) replaces the native header:
+    per surah segment with an inline Arabic-Indic ayah-number marker, not boxed per-ayah
+    cards. The marker is just bare digits in the *same* Uthmanic Hafs font as the body
+    text — that font has a built-in ligature that automatically draws the traditional
+    ornamental circle around single- *and* multi-digit ayah numbers, matching a real
+    printed Mushaf; using a different font for the marker (as an earlier version did) is
+    what broke that ligature. A custom top bar (`QuranReaderTopBar`) replaces the native header:
     back chevron, a context pill (Surah/Juz/Page number), a Home shortcut, and the
     surah-name pill. A bottom toolbar (`QuranReaderToolbar`) has real, working buttons:
     **Bookmark** (saves/removes this Surah/Juz/Page, shown in the list screen's
@@ -165,17 +178,23 @@ up correctly in the mobile app.
     Maps.
   - **Ask**: AI Q&A chat UI wired to and verified working against the deployed
     `ask-ai` Supabase Edge Function (see below).
-  - **Account**: sign-up is now **phone-number-based** — full name, phone, city,
-    gender, and a password, instead of an email. Uses Supabase's **native `phone`
-    field** on sign-up/sign-in (an earlier version faked an email address like
-    `{phone}@noor.local`, but Supabase's Auth server rejected it outright — `.local`
-    is an IETF-reserved special-use domain its email validator refuses on sight —
-    fixed by switching to the real `phone` field, which is the officially supported
-    way to do phone+password auth). *Not SMS-verified* — no OTP/SMS provider is
-    configured (that's a paid Supabase integration), so this trades phone verification
-    for working today at no cost; real verification could be added later if it's worth
-    the per-message cost. City/gender feed the admin dashboard's new population stats.
-    Plus "Your Masjid" picker, profile, sign out.
+  - **Account is now a one-time registration, no password at all** — Name, Phone,
+    City, Gender, submitted once and stored locally on the device (no login, no
+    session). This replaced two earlier password-based attempts (a synthetic-email
+    hack that Supabase's Auth server rejected outright, then Supabase's native phone
+    provider, which needed a dashboard toggle that didn't get switched on) — both
+    turned into repeated friction, so sign-up with a password was dropped entirely.
+    `registrations` is a plain table (`supabase/migrations/0013_simple_registration.sql`)
+    completely separate from `auth.users`/`profiles` — anyone can insert their own row
+    (no session to scope it to), nobody can browse the table, and a `find_registration_by_phone`
+    function lets a reinstalled app recover its existing row by phone number instead of
+    creating a duplicate. `lib/registration.ts` handles the insert/recovery,
+    `lib/useRegistration.ts` reads the local copy (`AsyncStorage`) so Home can show
+    "Assalamu alaikum, {name}" without any login. City/gender feed the admin
+    dashboard's population stats — see below. Plus "Your Masjid" picker, and a
+    "Not you? Switch profile" action that clears the local record. *Not phone-verified*
+    — anyone can type any number, the same tradeoff as before, just without a password
+    wrapped around it.
   - Navigation is now **4 bottom tabs — Home / Ask / Settings / Account** — with
     everything else (Qibla, Qur'an, Books & Hadith, Tasbih, Dua, Donate, Islamic
     Calendar, Community Help, Masjids, Halal Food) reached via Home's icon grid/stack.
@@ -255,16 +274,15 @@ Worth keeping in mind if something looks broken again:
 
 - User needs to add billing credits on console.anthropic.com for Ask AI to actually
   respond (see above — everything on our side is confirmed working).
-- **Sign-up is phone-number-based but not SMS-verified** — anyone can type any number;
-  real verification needs a paid SMS/OTP provider wired into Supabase's native phone
-  auth, which costs per message and needs the user to sign up for one (e.g. Twilio).
-  Worth doing if the population data needs to be trustworthy, not just self-reported.
-  No Google or other social sign-in is wired up either; could be added later.
-- **Two Supabase Dashboard steps needed for phone sign-up to work**: (1) Authentication
-  → Providers → Phone → enable the Phone provider (it's off by default); (2) with it
-  enabled, turn off "Confirm phone" for that provider — otherwise Supabase expects an
-  SMS OTP code to confirm the account, and no SMS provider is wired up so that code can
-  never be sent. Without both, new phone accounts will be created but can't sign in.
+- **Registration is not phone-verified** — anyone can type any number; real
+  verification would need a paid SMS/OTP provider (e.g. Twilio) wired in as a genuine
+  extra step, since registration no longer goes through Supabase Auth at all (see
+  above). Worth doing if the population data needs to be trustworthy, not just
+  self-reported. No login/social sign-in of any kind is planned — the whole point of
+  this model is that there isn't one.
+- **No Supabase Dashboard steps needed for registration to work** — unlike the two
+  earlier password-based attempts, this one only needs `0013_simple_registration.sql`
+  run; nothing to toggle in Authentication settings.
 - **Arabic font licensing risk**: the app now bundles the exact KFGQPC Uthmanic Hafs
   font from the user's reference photo, which is free for personal/non-commercial use
   only — see the note above. The user was offered a free, properly-licensed
@@ -295,8 +313,8 @@ Worth keeping in mind if something looks broken again:
 - Adhan sound toggle controls whether the local notification plays a sound at all —
   Expo Go / local notifications can't ship a custom Adhan audio file without an EAS
   build, so this is scoped honestly to sound on/off rather than a specific Adhan clip.
-- Account/profile is intentionally minimal (name, sign out) — no password reset flow
-  or avatar upload yet.
+- Account/profile is intentionally minimal (name, phone, city, gender, switch profile)
+  — no avatar upload yet, and no password-reset flow since there's no password at all.
 - Push notifications are local-only; no server-side push (Expo Push/FCM/APNs) for
   things like admin broadcast messages (Notices are pulled on Home load instead).
 - No app store metadata/build profiles (EAS) set up yet — this is still a dev-mode app

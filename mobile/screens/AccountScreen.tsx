@@ -14,14 +14,13 @@ import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import ScreenBackground from "../components/ScreenBackground";
 import { supabase } from "../lib/supabase";
-import { useAuth } from "../lib/useAuth";
+import { useRegistration } from "../lib/useRegistration";
+import { clearLocalRegistration, Gender, registerUser, Registration } from "../lib/registration";
 import { getHomeCity, getHomeMasjidId } from "../lib/homeMasjid";
 import { rootNavigate } from "../lib/navigationRef";
-import { isValidPhone, normalizePhone } from "../lib/phoneAuth";
+import { isValidPhone } from "../lib/phoneAuth";
 import { useTheme } from "../lib/ThemeContext";
 import type { Theme } from "../theme";
-
-type Gender = "male" | "female";
 
 function YourMasjidCard({ theme, styles }: { theme: Theme; styles: ReturnType<typeof makeStyles> }) {
   const [loading, setLoading] = useState(true);
@@ -77,87 +76,64 @@ function YourMasjidCard({ theme, styles }: { theme: Theme; styles: ReturnType<ty
   );
 }
 
-function AuthForm({ theme, styles }: { theme: Theme; styles: ReturnType<typeof makeStyles> }) {
-  const [mode, setMode] = useState<"signIn" | "signUp">("signIn");
+function RegisterForm({
+  theme,
+  styles,
+  onRegistered,
+}: {
+  theme: Theme;
+  styles: ReturnType<typeof makeStyles>;
+  onRegistered: () => void;
+}) {
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [city, setCity] = useState("");
   const [gender, setGender] = useState<Gender | null>(null);
-  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function submit() {
     setError(null);
-    setNotice(null);
 
+    if (!fullName.trim()) {
+      setError("Enter your full name.");
+      return;
+    }
     if (!isValidPhone(phone)) {
       setError("Enter a valid phone number.");
       return;
     }
-    if (mode === "signUp" && (!fullName.trim() || !gender)) {
-      setError("Full name and gender are required.");
+    if (!gender) {
+      setError("Select male or female.");
       return;
     }
 
     setLoading(true);
-    const normalizedPhone = normalizePhone(phone);
-
-    if (mode === "signIn") {
-      const { error } = await supabase.auth.signInWithPassword({ phone: normalizedPhone, password });
-      if (error) setError("Couldn't sign in — check your phone number and password.");
-    } else {
-      const { data, error } = await supabase.auth.signUp({
-        phone: normalizedPhone,
-        password,
-        options: {
-          data: {
-            full_name: fullName.trim(),
-            city: city.trim() || null,
-            gender,
-          },
-        },
-      });
-      if (error) {
-        setError(
-          error.message.includes("already registered") || error.message.includes("already exists")
-            ? "That phone number is already registered — try signing in instead."
-            : error.message
-        );
-      } else if (data.session) {
-        setNotice("Account created — you're signed in.");
-      } else {
-        // Supabase's "Confirm phone" setting is still on, which normally
-        // requires an SMS code — since no SMS provider is set up, that has
-        // to be turned off in the Supabase Dashboard (Authentication →
-        // Providers → Phone) for phone accounts to be usable right after
-        // signing up.
-        setNotice("Account created, but sign-in is pending phone confirmation — ask the app admin to turn that off.");
-      }
-    }
+    const result = await registerUser({ fullName, phone, city, gender });
     setLoading(false);
+
+    if (result.ok) {
+      onRegistered();
+    } else {
+      setError(result.error);
+    }
   }
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>
-          {mode === "signIn" ? "Sign in" : "Create an account"}
-        </Text>
+        <Text style={styles.cardTitle}>Register</Text>
         <Text style={styles.cardSubtitle}>
-          Signing in lets you keep your "Ask" question history saved across devices.
+          Just your details, no password — this helps us know who's using Noor.
         </Text>
 
-        {mode === "signUp" && (
-          <TextInput
-            placeholder="Full name"
-            placeholderTextColor={theme.colors.textMuted}
-            value={fullName}
-            onChangeText={setFullName}
-            style={styles.input}
-          />
-        )}
+        <TextInput
+          placeholder="Full name"
+          placeholderTextColor={theme.colors.textMuted}
+          value={fullName}
+          onChangeText={setFullName}
+          style={styles.input}
+        />
         <TextInput
           placeholder="Phone number"
           placeholderTextColor={theme.colors.textMuted}
@@ -167,61 +143,31 @@ function AuthForm({ theme, styles }: { theme: Theme; styles: ReturnType<typeof m
           onChangeText={setPhone}
           style={styles.input}
         />
-        {mode === "signUp" && (
-          <TextInput
-            placeholder="City / District"
-            placeholderTextColor={theme.colors.textMuted}
-            value={city}
-            onChangeText={setCity}
-            style={styles.input}
-          />
-        )}
-        {mode === "signUp" && (
-          <View style={styles.genderRow}>
-            {(["male", "female"] as Gender[]).map((g) => (
-              <TouchableOpacity
-                key={g}
-                style={[styles.genderChip, gender === g && styles.genderChipActive]}
-                onPress={() => setGender(g)}
-              >
-                <Text style={[styles.genderChipText, gender === g && styles.genderChipTextActive]}>
-                  {g === "male" ? "Male" : "Female"}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
         <TextInput
-          placeholder="Password"
+          placeholder="City / District"
           placeholderTextColor={theme.colors.textMuted}
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
+          value={city}
+          onChangeText={setCity}
           style={styles.input}
         />
+        <View style={styles.genderRow}>
+          {(["male", "female"] as Gender[]).map((g) => (
+            <TouchableOpacity
+              key={g}
+              style={[styles.genderChip, gender === g && styles.genderChipActive]}
+              onPress={() => setGender(g)}
+            >
+              <Text style={[styles.genderChipText, gender === g && styles.genderChipTextActive]}>
+                {g === "male" ? "Male" : "Female"}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
 
         {error && <Text style={styles.error}>{error}</Text>}
-        {notice && <Text style={styles.notice}>{notice}</Text>}
 
         <TouchableOpacity style={styles.primaryButton} onPress={submit} disabled={loading}>
-          {loading ? (
-            <ActivityIndicator color="white" />
-          ) : (
-            <Text style={styles.primaryButtonText}>
-              {mode === "signIn" ? "Sign in" : "Sign up"}
-            </Text>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => setMode(mode === "signIn" ? "signUp" : "signIn")}
-          style={{ marginTop: 12 }}
-        >
-          <Text style={styles.switchModeText}>
-            {mode === "signIn"
-              ? "New here? Create an account"
-              : "Already have an account? Sign in"}
-          </Text>
+          {loading ? <ActivityIndicator color="white" /> : <Text style={styles.primaryButtonText}>Register</Text>}
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -229,37 +175,38 @@ function AuthForm({ theme, styles }: { theme: Theme; styles: ReturnType<typeof m
 }
 
 function ProfileView({
-  profile,
+  registration,
   theme,
   styles,
+  onCleared,
 }: {
-  profile: { full_name: string | null; phone: string | null; city: string | null };
+  registration: Registration;
   theme: Theme;
   styles: ReturnType<typeof makeStyles>;
+  onCleared: () => void;
 }) {
-  async function signOut() {
-    await supabase.auth.signOut();
+  async function switchProfile() {
+    await clearLocalRegistration();
+    onCleared();
   }
 
   return (
     <View>
       <View style={styles.card}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
-            {(profile.full_name ?? "N").charAt(0).toUpperCase()}
-          </Text>
+          <Text style={styles.avatarText}>{registration.full_name.charAt(0).toUpperCase()}</Text>
         </View>
-        <Text style={styles.cardTitle}>{profile.full_name ?? "Assalamu alaikum"}</Text>
-        {(profile.phone || profile.city) && (
+        <Text style={styles.cardTitle}>{registration.full_name}</Text>
+        {(registration.phone || registration.city) && (
           <Text style={styles.cardSubtitle}>
-            {[profile.phone, profile.city].filter(Boolean).join(" — ")}
+            {[registration.phone, registration.city].filter(Boolean).join(" — ")}
           </Text>
         )}
       </View>
 
-      <TouchableOpacity style={styles.signOutButton} onPress={signOut}>
-        <Ionicons name="log-out-outline" size={16} color={theme.colors.danger} />
-        <Text style={styles.signOutText}>Sign out</Text>
+      <TouchableOpacity style={styles.signOutButton} onPress={switchProfile}>
+        <Ionicons name="swap-horizontal-outline" size={16} color={theme.colors.danger} />
+        <Text style={styles.signOutText}>Not you? Switch profile</Text>
       </TouchableOpacity>
     </View>
   );
@@ -268,7 +215,7 @@ function ProfileView({
 export default function AccountScreen() {
   const theme = useTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
-  const { loading, session, profile } = useAuth();
+  const { loading, registration, refresh } = useRegistration();
 
   if (loading) {
     return (
@@ -283,10 +230,10 @@ export default function AccountScreen() {
       <ScrollView contentContainerStyle={styles.container}>
         <YourMasjidCard theme={theme} styles={styles} />
 
-        {session && profile ? (
-          <ProfileView profile={profile} theme={theme} styles={styles} />
+        {registration ? (
+          <ProfileView registration={registration} theme={theme} styles={styles} onCleared={refresh} />
         ) : (
-          <AuthForm theme={theme} styles={styles} />
+          <RegisterForm theme={theme} styles={styles} onRegistered={refresh} />
         )}
       </ScrollView>
     </ScreenBackground>
@@ -344,7 +291,6 @@ function makeStyles(theme: Theme) {
     genderChipText: { fontSize: 14, fontWeight: "700", color: theme.colors.textMuted },
     genderChipTextActive: { color: "white" },
     error: { color: theme.colors.danger, fontSize: 13, marginBottom: 10 },
-    notice: { color: theme.colors.accent, fontSize: 13, marginBottom: 10 },
     primaryButton: {
       width: "100%",
       backgroundColor: theme.colors.accent,

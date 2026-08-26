@@ -32,13 +32,13 @@ function Overview() {
 
   useEffect(() => {
     async function load() {
-      const [masjids, halalFood, aiQuestions, locations, users, profiles] = await Promise.all([
+      const [masjids, halalFood, aiQuestions, locations, users, registrations] = await Promise.all([
         supabase.from("masjids").select("*", { count: "exact", head: true }),
         supabase.from("halal_food_places").select("*", { count: "exact", head: true }),
         supabase.from("ai_qa_history").select("*", { count: "exact", head: true }),
         supabase.from("locations").select("*", { count: "exact", head: true }),
-        supabase.from("profiles").select("*", { count: "exact", head: true }),
-        supabase.from("profiles").select("city, gender"),
+        supabase.from("registrations").select("*", { count: "exact", head: true }),
+        supabase.from("registrations").select("city, gender"),
       ]);
       setCounts({
         masjids: masjids.count ?? 0,
@@ -48,7 +48,7 @@ function Overview() {
         users: users.count ?? 0,
       });
 
-      const rows = (profiles.data as { city: string | null; gender: string | null }[]) ?? [];
+      const rows = (registrations.data as { city: string | null; gender: string | null }[]) ?? [];
       let male = 0, female = 0, unspecified = 0;
       const cityMap = new Map<string, number>();
       for (const r of rows) {
@@ -80,10 +80,11 @@ function Overview() {
         <StatCard label="AI questions asked" value={counts.aiQuestions} />
       </div>
 
-      <h2 className="mb-3 mt-8 text-lg font-semibold">Community (from sign-ups)</h2>
+      <h2 className="mb-3 mt-8 text-lg font-semibold">Community (from registrations)</h2>
       <p className="mb-4 text-sm text-gray-500">
-        Collected at sign-up — self-reported, not verified. Only from users who created an
-        account (most masjid/prayer-time features work without one).
+        Collected when someone registers in the app (name, phone, city, gender — no password,
+        no login) — self-reported, not verified. Only from people who registered
+        (most masjid/prayer-time features work without it).
       </p>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="rounded-xl border border-gray-200 bg-white p-5">

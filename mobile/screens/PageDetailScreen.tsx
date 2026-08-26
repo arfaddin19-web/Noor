@@ -8,6 +8,7 @@ import QuranReaderTopBar from "../components/QuranReaderTopBar";
 import QuranReaderToolbar from "../components/QuranReaderToolbar";
 import { saveLastRead } from "../lib/quranProgress";
 import { isBookmarked, toggleBookmark } from "../lib/quranBookmarks";
+import { getPageAyahs, QuranVerse } from "../lib/quranText";
 import {
   arabicFontSizeFor,
   arabicLineHeightFor,
@@ -19,10 +20,9 @@ import {
 import { useTheme } from "../lib/ThemeContext";
 import type { Theme } from "../theme";
 
-interface PageAyah {
+interface Ayah {
   numberInSurah: number;
   text: string;
-  surah?: { number: number; englishName: string; name: string };
 }
 
 type PageRoute = RouteProp<HomeStackParamList, "PageDetail">;
@@ -31,13 +31,17 @@ export default function PageDetailScreen() {
   const theme = useTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const { params } = useRoute<PageRoute>();
-  const [arabic, setArabic] = useState<PageAyah[]>([]);
-  const [translation, setTranslation] = useState<PageAyah[]>([]);
+  // The Arabic text is bundled locally (see lib/quranText.ts) — instant, no
+  // network dependency. Only the English translation is fetched, and its
+  // loading/error state stays scoped to the (optional, off-by-default)
+  // translation block rather than blocking the reader itself.
+  const arabic: QuranVerse[] = useMemo(() => getPageAyahs(params.number), [params.number]);
+  const [translation, setTranslation] = useState<Ayah[]>([]);
+  const [translationError, setTranslationError] = useState(false);
+  const [translationLoading, setTranslationLoading] = useState(true);
   const [showTranslation, setShowTranslation] = useState(false);
   const [textSize, setTextSizeState] = useState<TextSize>("medium");
   const [bookmarked, setBookmarked] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const label = `Page ${params.number}`;
 
@@ -46,20 +50,13 @@ export default function PageDetailScreen() {
     getTextSize().then(setTextSizeState);
     isBookmarked("page", params.number).then(setBookmarked);
 
-    Promise.all([
-      fetch(`https://api.alquran.cloud/v1/page/${params.number}/quran-uthmani`).then((r) =>
-        r.json()
-      ),
-      fetch(`https://api.alquran.cloud/v1/page/${params.number}/en.sahih`).then((r) =>
-        r.json()
-      ),
-    ])
-      .then(([ar, en]) => {
-        setArabic(ar.data.ayahs);
-        setTranslation(en.data.ayahs);
-      })
-      .catch(() => setError("Couldn't load this page. Check your connection."))
-      .finally(() => setLoading(false));
+    setTranslationLoading(true);
+    setTranslationError(false);
+    fetch(`https://api.alquran.cloud/v1/page/${params.number}/en.sahih`)
+      .then((r) => r.json())
+      .then((en) => setTranslation(en.data.ayahs))
+      .catch(() => setTranslationError(true))
+      .finally(() => setTranslationLoading(false));
   }, [params.number]);
 
   useFocusEffect(
@@ -69,15 +66,15 @@ export default function PageDetailScreen() {
   );
 
   const segments = useMemo(() => {
-    const groups: { surahName: string; surahArabic: string; ayahs: PageAyah[] }[] = [];
+    const groups: { surahName: string; surahArabic: string; ayahs: QuranVerse[] }[] = [];
     arabic.forEach((ayah) => {
       const last = groups[groups.length - 1];
-      if (last && last.surahName === ayah.surah?.englishName) {
+      if (last && last.surahName === ayah.surah.englishName) {
         last.ayahs.push(ayah);
       } else {
         groups.push({
-          surahName: ayah.surah?.englishName ?? "",
-          surahArabic: ayah.surah?.name ?? "",
+          surahName: ayah.surah.englishName,
+          surahArabic: ayah.surah.name,
           ayahs: [ayah],
         });
       }
@@ -85,7 +82,7 @@ export default function PageDetailScreen() {
     return groups;
   }, [arabic]);
 
-  const firstSurahName = arabic[0]?.surah?.englishName ?? "";
+  const firstSurahName = arabic[0]?.surah.englishName ?? "";
 
   async function handleToggleBookmark() {
     const now = await toggleBookmark({ type: "page", number: params.number, label });
@@ -101,22 +98,6 @@ export default function PageDetailScreen() {
   async function handleShare() {
     const body = arabic.map((a) => a.text).join(" ");
     await Share.share({ message: `${label}\n\n${body}\n\n— shared from Noor` });
-  }
-
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator color={theme.colors.accent} />
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.muted}>{error}</Text>
-      </View>
-    );
   }
 
   let runningIndex = 0;
@@ -141,14 +122,20 @@ export default function PageDetailScreen() {
               />
               {showTranslation && (
                 <View style={styles.translationBlock}>
-                  {seg.ayahs.map((a, j) => (
-                    <View key={j} style={styles.translationRow}>
-                      <Text style={styles.translationNumber}>{a.numberInSurah}.</Text>
-                      <Text style={styles.translationText}>
-                        {translation[startIndex + j]?.text}
-                      </Text>
-                    </View>
-                  ))}
+                  {translationLoading ? (
+                    <ActivityIndicator color={theme.colors.accent} />
+                  ) : translationError ? (
+                    <Text style={styles.muted}>Couldn't load the translation. Check your connection.</Text>
+                  ) : (
+                    seg.ayahs.map((a, j) => (
+                      <View key={j} style={styles.translationRow}>
+                        <Text style={styles.translationNumber}>{a.numberInSurah}.</Text>
+                        <Text style={styles.translationText}>
+                          {translation[startIndex + j]?.text}
+                        </Text>
+                      </View>
+                    ))
+                  )}
                 </View>
               )}
             </View>

@@ -139,12 +139,11 @@ const lightShadow = {
 // than a properly commercially-licensed font; getting a real license from
 // King Fahd Glorious Quran Printing Complex would remove that risk later, and
 // is a one-file swap since every screen reads the font from here. Loaded via
-// expo-font in App.tsx (assets/fonts/UthmanicHafs-Regular.otf + Amiri-Bold.ttf
-// — Uthmanic Hafs has no bold cut, so ayah-marker numerals still use Amiri
-// Bold). Used for every block of Arabic in the app (Qur'an reader, Dua/Kalima
-// text, Ayah of the Day).
+// expo-font in App.tsx (assets/fonts/UthmanicHafs-Regular.otf). Used for
+// every block of Arabic in the app (Qur'an reader — body text and ayah-end
+// numeral markers alike, so the font's own ligature can draw the ornamental
+// circle around them — Dua/Kalima text, Ayah of the Day).
 export const ARABIC_FONT_REGULAR = "UthmanicHafs-Regular";
-export const ARABIC_FONT_BOLD = "Amiri-Bold";
 
 export function getTheme(mode: "light" | "dark"): Theme {
   return {

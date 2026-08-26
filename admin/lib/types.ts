@@ -1,13 +1,24 @@
 export type UserRole = "user" | "admin";
 
+// Admin-dashboard accounts only — real Supabase Auth users, linked via
+// auth.users. End-user population data (name/phone/city/gender collected at
+// registration) lives in `registrations` below, which has no login at all.
 export interface Profile {
   id: string;
   full_name: string | null;
   avatar_url: string | null;
-  phone: string | null;
+  role: UserRole;
+  created_at: string;
+}
+
+// One row per person who registered in the mobile app (Name/Phone/City/
+// Gender, no password) — see mobile/lib/registration.ts.
+export interface Registration {
+  id: string;
+  full_name: string;
+  phone: string;
   city: string | null;
   gender: "male" | "female" | null;
-  role: UserRole;
   created_at: string;
 }
 

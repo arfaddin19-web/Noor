@@ -8,6 +8,7 @@ import QuranReaderTopBar from "../components/QuranReaderTopBar";
 import QuranReaderToolbar from "../components/QuranReaderToolbar";
 import { saveLastRead } from "../lib/quranProgress";
 import { isBookmarked, toggleBookmark } from "../lib/quranBookmarks";
+import { getSurahAyahs, QuranVerse } from "../lib/quranText";
 import {
   arabicFontSizeFor,
   arabicLineHeightFor,
@@ -30,31 +31,31 @@ export default function SurahDetailScreen() {
   const theme = useTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const { params } = useRoute<SurahRoute>();
-  const [arabic, setArabic] = useState<Ayah[]>([]);
+  // The Arabic text is bundled locally (see lib/quranText.ts), so it's
+  // available instantly with no network dependency and no way to fail —
+  // only the English translation is fetched, and its loading/error state
+  // stays scoped to the (optional, off-by-default) translation block below
+  // rather than blocking the reader itself.
+  const arabic: QuranVerse[] = useMemo(() => getSurahAyahs(params.number), [params.number]);
   const [translation, setTranslation] = useState<Ayah[]>([]);
+  const [translationError, setTranslationError] = useState(false);
+  const [translationLoading, setTranslationLoading] = useState(true);
   const [showTranslation, setShowTranslation] = useState(false);
   const [textSize, setTextSizeState] = useState<TextSize>("medium");
   const [bookmarked, setBookmarked] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     saveLastRead({ type: "surah", number: params.number, label: params.englishName });
     getTextSize().then(setTextSizeState);
     isBookmarked("surah", params.number).then(setBookmarked);
 
-    Promise.all([
-      fetch(`https://api.alquran.cloud/v1/surah/${params.number}`).then((r) => r.json()),
-      fetch(`https://api.alquran.cloud/v1/surah/${params.number}/en.sahih`).then((r) =>
-        r.json()
-      ),
-    ])
-      .then(([ar, en]) => {
-        setArabic(ar.data.ayahs);
-        setTranslation(en.data.ayahs);
-      })
-      .catch(() => setError("Couldn't load this surah. Check your connection."))
-      .finally(() => setLoading(false));
+    setTranslationLoading(true);
+    setTranslationError(false);
+    fetch(`https://api.alquran.cloud/v1/surah/${params.number}/en.sahih`)
+      .then((r) => r.json())
+      .then((en) => setTranslation(en.data.ayahs))
+      .catch(() => setTranslationError(true))
+      .finally(() => setTranslationLoading(false));
   }, [params.number]);
 
   useFocusEffect(
@@ -79,22 +80,6 @@ export default function SurahDetailScreen() {
     await Share.share({ message: `${params.englishName}\n\n${body}\n\n— shared from Noor` });
   }
 
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator color={theme.colors.accent} />
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.muted}>{error}</Text>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.page}>
       <QuranReaderTopBar leftLabel={`Surah ${params.number}`} rightLabel={params.englishName} />
@@ -106,12 +91,18 @@ export default function SurahDetailScreen() {
         />
         {showTranslation && (
           <View style={styles.translationBlock}>
-            {arabic.map((a, i) => (
-              <View key={i} style={styles.translationRow}>
-                <Text style={styles.translationNumber}>{a.numberInSurah}.</Text>
-                <Text style={styles.translationText}>{translation[i]?.text}</Text>
-              </View>
-            ))}
+            {translationLoading ? (
+              <ActivityIndicator color={theme.colors.accent} />
+            ) : translationError ? (
+              <Text style={styles.muted}>Couldn't load the translation. Check your connection.</Text>
+            ) : (
+              arabic.map((a, i) => (
+                <View key={i} style={styles.translationRow}>
+                  <Text style={styles.translationNumber}>{a.numberInSurah}.</Text>
+                  <Text style={styles.translationText}>{translation[i]?.text}</Text>
+                </View>
+              ))
+            )}
           </View>
         )}
       </ScrollView>
