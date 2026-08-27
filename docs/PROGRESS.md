@@ -252,6 +252,27 @@ up correctly in the mobile app.
   - **Masjid Detail** / **Halal Food Detail**: hero image (placeholder if none set),
     address/phone, and for masjids a Prayer/Azan/Iqama table; a Directions button opens
     Maps.
+  - **Yearly Jamat calendar per masjid** (new): masjids previously had one fixed Jamat
+    time per prayer, entered by hand. Since Jamat times realistically shift through the
+    year (mirroring the seasonal Adhan shift), and typing/uploading 365 days × 6 prayers
+    by hand for every masjid isn't practical, this adds a **self-serve CSV upload** —
+    no admin-dashboard coding or asking Claude required per masjid. New table
+    `masjid_jamat_times` (`0016_masjid_jamat_calendar.sql`), one row per (masjid, month,
+    day), same shape as the national `prayer_times` table. On the admin dashboard's
+    Masjids page, each masjid has a **"Yearly ▾"** toggle revealing
+    `JamatCalendarUpload` — **Download CSV template** (all 365 blank days,
+    `month,day,fajr,dhuhr,asr,maghrib,isha,jumma`, ready to fill in Excel from a printed
+    mosque calendar) and **Upload CSV** (parses in-browser, validates each time value
+    is 24h `HH:MM`, reports which rows — if any — were skipped and why, then bulk-upserts
+    the rest), plus a **Clear** button to remove a masjid's yearly calendar and fall back
+    to its fixed times again. The existing single Jamat fields per masjid are kept as
+    that fallback — a masjid with no yearly file uploaded yet works exactly as before.
+    On mobile, Masjid Detail's Prayer/Azan/Iqama table and Home's "Jamat at…" banner
+    both look up **today's exact time** from the yearly calendar when one exists (with
+    a small note saying so), falling back to the fixed time otherwise. The Masjids list
+    screen's at-a-glance time chips intentionally keep showing the fixed/fallback value
+    only, to avoid one date-lookup query per masjid in a long list — exact per-day times
+    are only fetched for the one masjid a screen is actually about.
   - **Ask**: AI Q&A chat UI wired to and verified working against the deployed
     `ask-ai` Supabase Edge Function (see below).
   - **Account is now a one-time registration, no password at all** — Name, Phone,
@@ -404,6 +425,11 @@ Worth keeping in mind if something looks broken again:
 - No Hindi or Nepali hadith translations exist in any free source we could find; Urdu
   is offered instead. Worth revisiting if a Hindi/Nepali source turns up.
 - ~~Halal food doesn't have the same city search bar Masjids just got~~ — done, see above.
+- **Action needed for the yearly Jamat calendar**: run
+  `supabase/migrations/0016_masjid_jamat_calendar.sql` in the Supabase SQL Editor —
+  until then the "Yearly ▾" upload feature on the admin Masjids page will error, since
+  the table it writes to doesn't exist yet. After that, uploading calendars is entirely
+  self-serve from the dashboard — no further action from me needed per masjid.
 - **Action needed for the Halal Food city field**: run
   `supabase/migrations/0015_halal_food_city.sql` in the Supabase SQL Editor (same as
   every migration) — until then the `city` column doesn't exist yet, so the new search

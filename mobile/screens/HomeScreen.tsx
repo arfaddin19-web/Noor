@@ -21,6 +21,7 @@ import { PrayerTime, Location, Masjid } from "../lib/types";
 import { getCurrentPrayer, getNextPrayer, hasPrayerTimeArrived, todayMonthDay } from "../lib/prayerLogic";
 import { formatHijri } from "../lib/hijri";
 import { getHomeCity, getHomeMasjidId } from "../lib/homeMasjid";
+import { getTodayJamat, TodayJamat } from "../lib/masjidJamat";
 import { getQuranActivityToday } from "../lib/quranProgress";
 import { getTodaySalatChecklist, toggleSalat, SALAT_ORDER, SalatChecklist } from "../lib/salatChecklist";
 import { getActiveNotices, Notice } from "../lib/notices";
@@ -89,6 +90,14 @@ const JAMAT_KEY_FOR_LABEL: Record<string, keyof Masjid> = {
   Isha: "isha_jamat",
 };
 
+const JAMAT_TODAY_KEY_FOR_LABEL: Record<string, keyof TodayJamat> = {
+  Fajr: "fajr",
+  Dhuhr: "dhuhr",
+  Asr: "asr",
+  Maghrib: "maghrib",
+  Isha: "isha",
+};
+
 export default function HomeScreen() {
   const theme = useTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
@@ -102,6 +111,7 @@ export default function HomeScreen() {
   const [today, setToday] = useState<PrayerTime | null>(null);
   const [tomorrow, setTomorrow] = useState<PrayerTime | null>(null);
   const [homeMasjid, setHomeMasjid] = useState<Masjid | null>(null);
+  const [todayJamat, setTodayJamat] = useState<TodayJamat | null>(null);
   const [notices, setNotices] = useState<Notice[]>([]);
   const [ayahOfDay, setAyahOfDay] = useState<AyahOfDay | null>(null);
   const hadithOfDay = useMemo(() => getHadithForDate(), []);
@@ -165,14 +175,15 @@ export default function HomeScreen() {
     }
 
     if (homeMasjidId) {
-      const { data } = await supabase
-        .from("masjids")
-        .select("*")
-        .eq("id", homeMasjidId)
-        .maybeSingle();
+      const [{ data }, jamatToday] = await Promise.all([
+        supabase.from("masjids").select("*").eq("id", homeMasjidId).maybeSingle(),
+        getTodayJamat(homeMasjidId),
+      ]);
       setHomeMasjid((data as Masjid) ?? null);
+      setTodayJamat(jamatToday);
     } else {
       setHomeMasjid(null);
+      setTodayJamat(null);
     }
 
     hasLoadedRef.current = true;
@@ -228,7 +239,11 @@ export default function HomeScreen() {
 
   const next = today ? getNextPrayer(today, tomorrow, now) : null;
   const current = today ? getCurrentPrayer(today, now) : null;
-  const nextJamat = next && homeMasjid ? (homeMasjid[JAMAT_KEY_FOR_LABEL[next.label]] as string | null) : null;
+  const nextJamat =
+    next && homeMasjid
+      ? todayJamat?.[JAMAT_TODAY_KEY_FOR_LABEL[next.label]] ??
+        (homeMasjid[JAMAT_KEY_FOR_LABEL[next.label]] as string | null)
+      : null;
 
   const doneCount = SALAT_ORDER.filter((p) => checklist[p.key]).length;
 

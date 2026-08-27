@@ -1,8 +1,9 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import React, { FormEvent, useEffect, useState } from "react";
 import AuthGate from "@/components/AuthGate";
 import DashboardShell from "@/components/DashboardShell";
+import JamatCalendarUpload from "@/components/JamatCalendarUpload";
 import { supabase } from "@/lib/supabase";
 import { Masjid } from "@/lib/types";
 
@@ -25,6 +26,7 @@ function MasjidsManager() {
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -127,7 +129,8 @@ function MasjidsManager() {
             {loading && <tr><td className="px-3 py-4 text-gray-400" colSpan={9}>Loading…</td></tr>}
             {!loading && items.length === 0 && <tr><td className="px-3 py-4 text-gray-400" colSpan={9}>No masjids yet.</td></tr>}
             {items.map((item) => (
-              <tr key={item.id} className="border-t border-gray-100">
+              <React.Fragment key={item.id}>
+              <tr className="border-t border-gray-100">
                 <td className="px-3 py-2 font-medium">
                   {item.name}
                   {(item.city || item.address) && (
@@ -162,9 +165,23 @@ function MasjidsManager() {
                   >
                     {savingId === item.id ? "Saving…" : "Save"}
                   </button>
+                  <button
+                    onClick={() => setExpandedId(expandedId === item.id ? null : item.id)}
+                    className="mr-3 text-xs text-noor-700 hover:underline"
+                  >
+                    {expandedId === item.id ? "Hide yearly ▴" : "Yearly ▾"}
+                  </button>
                   <button onClick={() => remove(item)} className="text-xs text-red-600 hover:underline">Delete</button>
                 </td>
               </tr>
+              {expandedId === item.id && (
+                <tr className="border-t border-gray-100 bg-gray-50/50">
+                  <td colSpan={9} className="px-3 py-3">
+                    <JamatCalendarUpload masjidId={item.id} masjidName={item.name} />
+                  </td>
+                </tr>
+              )}
+              </React.Fragment>
             ))}
           </tbody>
         </table>

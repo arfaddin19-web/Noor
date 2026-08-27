@@ -47,6 +47,23 @@ export interface PrayerTime {
   jumma: string | null;
 }
 
+// One row per masjid per day-of-year — the yearly Jamat calendar, uploaded
+// via CSV from the Masjids page (see components/JamatCalendarUpload.tsx).
+// Same shape as PrayerTime above, but per masjid instead of per location,
+// and Jamat (congregation) times instead of Adhan times.
+export interface MasjidJamatTime {
+  id: string;
+  masjid_id: string;
+  month: number;
+  day: number;
+  fajr: string | null;
+  dhuhr: string | null;
+  asr: string | null;
+  maghrib: string | null;
+  isha: string | null;
+  jumma: string | null;
+}
+
 export type FoodCategory =
   | "restaurant"
   | "cafe"

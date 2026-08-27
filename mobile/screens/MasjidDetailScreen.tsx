@@ -15,17 +15,18 @@ import type { HomeStackParamList } from "../App";
 import { supabase } from "../lib/supabase";
 import { Masjid, PrayerTime } from "../lib/types";
 import { todayMonthDay } from "../lib/prayerLogic";
+import { getTodayJamat, TodayJamat } from "../lib/masjidJamat";
 import { useTheme } from "../lib/ThemeContext";
 import type { Theme } from "../theme";
 
 type DetailRoute = RouteProp<HomeStackParamList, "MasjidDetail">;
 
-const PRAYER_ROWS: { label: string; adhanKey: keyof PrayerTime; jamatKey: keyof Masjid }[] = [
-  { label: "Fajr", adhanKey: "fajr", jamatKey: "fajr_jamat" },
-  { label: "Dhuhr", adhanKey: "dhuhr", jamatKey: "dhuhr_jamat" },
-  { label: "Asr", adhanKey: "asr", jamatKey: "asr_jamat" },
-  { label: "Maghrib", adhanKey: "maghrib", jamatKey: "maghrib_jamat" },
-  { label: "Isha", adhanKey: "isha", jamatKey: "isha_jamat" },
+const PRAYER_ROWS: { label: string; adhanKey: keyof PrayerTime; jamatKey: keyof Masjid; jamatTodayKey: keyof TodayJamat }[] = [
+  { label: "Fajr", adhanKey: "fajr", jamatKey: "fajr_jamat", jamatTodayKey: "fajr" },
+  { label: "Dhuhr", adhanKey: "dhuhr", jamatKey: "dhuhr_jamat", jamatTodayKey: "dhuhr" },
+  { label: "Asr", adhanKey: "asr", jamatKey: "asr_jamat", jamatTodayKey: "asr" },
+  { label: "Maghrib", adhanKey: "maghrib", jamatKey: "maghrib_jamat", jamatTodayKey: "maghrib" },
+  { label: "Isha", adhanKey: "isha", jamatKey: "isha_jamat", jamatTodayKey: "isha" },
 ];
 
 export default function MasjidDetailScreen() {
@@ -34,6 +35,7 @@ export default function MasjidDetailScreen() {
   const { params } = useRoute<DetailRoute>();
   const [masjid, setMasjid] = useState<Masjid | null>(null);
   const [adhan, setAdhan] = useState<PrayerTime | null>(null);
+  const [todayJamat, setTodayJamat] = useState<TodayJamat | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -45,6 +47,9 @@ export default function MasjidDetailScreen() {
         .eq("id", params.id)
         .single();
       setMasjid((m as Masjid) ?? null);
+      // Prefer today's exact time from the masjid's yearly Jamat calendar if
+      // it has uploaded one; falls back to the fixed *_jamat columns below.
+      setTodayJamat(await getTodayJamat(params.id));
 
       const { data: loc } = await supabase
         .from("locations")
@@ -128,16 +133,19 @@ export default function MasjidDetailScreen() {
                   {adhan ? (adhan[row.adhanKey] as string) : "—"}
                 </Text>
                 <Text style={styles.tableCell}>
-                  {(masjid[row.jamatKey] as string | null) ?? "—"}
+                  {todayJamat?.[row.jamatTodayKey] ?? (masjid[row.jamatKey] as string | null) ?? "—"}
                 </Text>
               </View>
             ))}
-            {masjid.jumma_jamat && (
+            {(todayJamat?.jumma ?? masjid.jumma_jamat) && (
               <View style={styles.tableRow}>
                 <Text style={[styles.tableCellLabel, { flex: 1.2 }]}>Jumu'ah</Text>
                 <Text style={styles.tableCell}>—</Text>
-                <Text style={styles.tableCell}>{masjid.jumma_jamat}</Text>
+                <Text style={styles.tableCell}>{todayJamat?.jumma ?? masjid.jumma_jamat}</Text>
               </View>
+            )}
+            {todayJamat && (
+              <Text style={styles.calendarNote}>Today's exact Jamat times from this masjid's yearly calendar.</Text>
             )}
           </View>
         </View>
@@ -193,6 +201,13 @@ function makeStyles(theme: Theme) {
     },
     tableCellLabel: { flex: 1, fontWeight: "600", color: theme.colors.textPrimary, fontSize: 13 },
     tableCell: { flex: 1, color: theme.colors.textMuted, fontSize: 13 },
+    calendarNote: {
+      fontSize: 11,
+      color: theme.colors.textMuted,
+      fontStyle: "italic",
+      padding: 10,
+      paddingTop: 0,
+    },
     footer: {
       position: "absolute",
       bottom: 0,
