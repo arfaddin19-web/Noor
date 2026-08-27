@@ -84,20 +84,23 @@ up correctly in the mobile app.
     earlier raw-magnetometer `atan2()` math, which was unreliable and could point the
     needle backwards on some devices. A fixed triangular pointer now sits at the top of
     the ring (doesn't rotate), the same convention as a real compass: the dial turns
-    underneath it. Redesigned to match the iPhone Compass app's look — solid black dial,
-    thin white tick marks (5° apart, longer at 30° and at the cardinals), big white N/E/S/W
-    letters plus plain degree numbers at the other 30° marks, a large heading readout above
-    the dial, and a black header bar (instead of the app's usual emerald gradient, which
-    clashed with it). A small drawn Kaaba icon (not the 🕋 emoji, which renders
-    inconsistently across devices/fonts) sits directly on the dial at the Qibla bearing —
-    in place of whatever plain tick would otherwise be there — with the needle pointing at
-    it; alignment means that icon meets the fixed top pointer. Sized down from a 300px to
-    a 250px ring per feedback. *Not yet pixel-matched to the user's reference photo* — this
-    redesign was done from a description/memory of it rather than the actual file (it
-    wasn't saved on disk, only shown inline in an earlier turn), so it's a good-faith
-    "iPhone Compass style" build rather than an exact copy; asked the user to resend the
-    photo to match it precisely. (Intentionally skipped: a
-    live map thumbnail — decorative/heavy, not core functionality.)
+    underneath it. Redesigned to match the actual iPhone Compass app screenshot the user
+    sent — 250px solid black dial, a tick every 3° (longer at 15°/30°/cardinals, matching
+    the dense ring in the photo), big white N/E/S/W letters plus plain degree numbers at
+    the other 30° marks, a large "270° W"-style heading readout (with the nearest 8-point
+    compass letter, `compassPoint()`) above the dial, and a black header bar (instead of
+    the app's usual emerald gradient, which clashed with it). A small drawn Kaaba icon
+    (not the 🕋 emoji, which renders inconsistently across devices/fonts) sits directly on
+    the dial at the Qibla bearing — in place of whatever plain tick would otherwise be
+    there — with the needle pointing at it. The photo's red arc — there, between current
+    heading and true north — is reinterpreted here as the arc between current heading and
+    the **Kaaba** (`AlignmentArc`, via `react-native-svg`, newly added as a dependency —
+    the exact version Expo SDK 54 bundles, `expo/bundledNativeModules.json`), which is
+    both visually faithful to the reference and more useful for this app's actual purpose:
+    a glance at the arc shows how far off you are and which way to turn. Alignment means
+    that icon meets the fixed top pointer, at which point the arc disappears. (Intentionally
+    skipped: a live map thumbnail and raw GPS coordinates — decorative, not core
+    functionality for a Qibla-finding screen.)
   - **Qur'an list**: "Last Read" hero card (jumps back into whichever Surah/Juz/Page you
     last opened), a **Bookmarks** row (long-press a chip to remove it), a Sura/Page/Juz
     underline-tab toggle, 8-point star badges on Surah/Juz rows, and a 604-tile Page grid.

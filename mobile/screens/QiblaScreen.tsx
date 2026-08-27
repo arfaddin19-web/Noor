@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Animated, StyleSheet, Text, View } from "react-native";
+import Svg, { Circle } from "react-native-svg";
 import * as Location from "expo-location";
 import { useTheme } from "../lib/ThemeContext";
 import type { Theme } from "../theme";
@@ -10,8 +11,9 @@ const KAABA_LNG = 39.8262;
 
 const RING_SIZE = 250;
 const TICK_RADIUS = 115;
-const LABEL_RADIUS = 92;
-const KAABA_RADIUS = 107;
+const LABEL_RADIUS = 90;
+const KAABA_RADIUS = 104;
+const ARC_RADIUS = RING_SIZE / 2 - 6;
 const ALIGN_TOLERANCE_DEG = 6;
 
 // Apple Compass-style dial: big cardinal letters at N/E/S/W, plain degree
@@ -31,7 +33,11 @@ const DIAL_MARKS = [
   { bearing: 330, label: "330", cardinal: false },
 ];
 
-const TICKS = Array.from({ length: 72 }, (_, i) => i * 5);
+// A tick every 3° (matching the dense ring in the reference photo), longer at
+// every 15° and longest at the cardinals/30° marks.
+const TICKS = Array.from({ length: 120 }, (_, i) => i * 3);
+
+const COMPASS_POINTS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
 
 function toRad(deg: number) {
   return (deg * Math.PI) / 180;
@@ -53,6 +59,12 @@ function bearingTo(lat1: number, lng1: number, lat2: number, lng2: number): numb
 /** Smallest signed difference (in degrees, -180..180) from `a` to `b`. */
 function angleDiff(a: number, b: number): number {
   return ((b - a + 540) % 360) - 180;
+}
+
+/** Nearest 8-point compass abbreviation for a bearing, e.g. "270° W" the way
+ *  the iPhone Compass app labels its heading readout. */
+function compassPoint(deg: number): string {
+  return COMPASS_POINTS[Math.round(((deg % 360) + 360) % 360 / 45) % 8];
 }
 
 /** The device's compass heading (0 = true north, clockwise), from the same OS
@@ -106,6 +118,39 @@ function CompassMark({
         {children}
       </View>
     </View>
+  );
+}
+
+/** The red band between the fixed top pointer (where you're currently facing)
+ *  and the Qibla bearing, drawn the short way round — at a glance, shows how
+ *  far off you are and which way to turn, the same idea as the reference
+ *  photo's red arc (there, between the current heading and true north; here,
+ *  between current heading and the Kaaba, which is what this screen is for). */
+function AlignmentArc({ sweepDeg, size, radius }: { sweepDeg: number; size: number; radius: number }) {
+  const circumference = 2 * Math.PI * radius;
+  const sweepLength = (Math.abs(sweepDeg) / 360) * circumference;
+  // SVG circles start their stroke at the 3-o'clock point and draw clockwise;
+  // rotate -90° to start at the top (the fixed pointer), then further offset
+  // by the sweep's start point when it runs counter-clockwise from there.
+  const rotation = -90 + Math.min(0, sweepDeg);
+
+  if (Math.abs(sweepDeg) < 1) return null;
+
+  return (
+    <Svg width={size} height={size} style={StyleSheet.absoluteFill}>
+      <Circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        stroke="#e0342a"
+        strokeWidth={7}
+        strokeLinecap="round"
+        fill="none"
+        strokeDasharray={`${sweepLength}, ${circumference}`}
+        rotation={rotation}
+        origin={`${size / 2}, ${size / 2}`}
+      />
+    </Svg>
   );
 }
 
@@ -191,7 +236,7 @@ export default function QiblaScreen() {
   return (
     <View style={styles.page}>
       <Text style={[styles.headingReadout, isAligned && styles.headingReadoutAligned]}>
-        {Math.round(heading)}°
+        {Math.round(heading)}° {compassPoint(heading)}
       </Text>
       <Text style={styles.qiblaSubtext}>Qibla is at {Math.round(qiblaBearing)}°</Text>
 
@@ -204,15 +249,25 @@ export default function QiblaScreen() {
 
         <View style={styles.compassRing} />
 
+        {!isAligned && (
+          <AlignmentArc
+            sweepDeg={angleDiff(heading, qiblaBearing)}
+            size={RING_SIZE}
+            radius={ARC_RADIUS}
+          />
+        )}
+
         <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ rotate: dialSpin }] }]}>
           {TICKS.map((deg) => {
             const isCardinal = deg % 90 === 0;
             const isThirty = deg % 30 === 0 && !isCardinal;
+            const isFifteen = deg % 15 === 0 && !isThirty && !isCardinal;
             return (
               <CompassMark key={deg} bearing={deg} radius={TICK_RADIUS}>
                 <View
                   style={[
                     styles.tick,
+                    isFifteen && styles.tickFifteen,
                     isThirty && styles.tickThirty,
                     isCardinal && styles.tickCardinal,
                   ]}
@@ -265,7 +320,7 @@ function makeStyles(theme: Theme) {
     backgroundColor: "#000",
   },
   muted: { color: "#9a9a9a", textAlign: "center" },
-  headingReadout: { fontSize: 46, fontWeight: "300", color: "white", letterSpacing: 1 },
+  headingReadout: { fontSize: 44, fontWeight: "300", color: "white", letterSpacing: 1 },
   headingReadoutAligned: { color: "#3ecf6a" },
   qiblaSubtext: { fontSize: 13, color: "#9a9a9a", marginTop: 2, marginBottom: 20, fontWeight: "600" },
   compassWrap: {
@@ -297,7 +352,8 @@ function makeStyles(theme: Theme) {
     borderColor: "#2c2c2c",
     backgroundColor: "#111",
   },
-  tick: { width: 1, height: 6, backgroundColor: "#565656" },
+  tick: { width: 1, height: 5, backgroundColor: "#4a4a4a" },
+  tickFifteen: { height: 7, backgroundColor: "#6e6e6e" },
   tickThirty: { width: 1.5, height: 10, backgroundColor: "#a8a8a8" },
   tickCardinal: { width: 2, height: 14, backgroundColor: "white" },
   dirLabel: { fontSize: 12, fontWeight: "600", color: "#c9c9c9" },
