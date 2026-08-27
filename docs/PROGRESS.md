@@ -150,21 +150,28 @@ up correctly in the mobile app.
     Hindi/Nepali translations aren't published by any free hadith source we could find —
     Urdu is offered as the closest available alternate-language reading.
   - **Muntakhab Ahadith (English)** is a full entry in Books & Hadith too, but shown
-    differently from the others: as **350 scanned page images** (`MuntakhabAhadithScreen`,
-    `lib/muntakhabAhadithPages.ts`), not extracted text. The user's PDF interleaves Arabic
-    and English tightly around every single hadith (unlike Bahishti Zewar's continuous
-    English prose) — text extraction was tried three different ways (default, layout-
-    preserving, and splitting each page into left/right column images before reading) and
-    genuinely scrambled sentence order every time, e.g. fusing two unrelated hadith into
-    one nonsense sentence. That's not an acceptable shortcut for source text where
-    misattributing what a hadith says actually matters, so instead each PDF page (each one
-    a two-book-page spread, matching how the original was scanned) is rendered as a JPEG
-    (`pdftoppm`, 85dpi/quality 40 — chosen to balance legibility against the ~36MB this
-    adds to the app; users pinch-to-zoom for detail) and shown in a swipeable page viewer,
-    remembering the last page read. This adds real weight to the app's download size — the
-    exported bundle went from ~9MB to ~49MB — worth flagging to the user; a lighter-weight
-    option later would be hosting these in Supabase Storage and fetching on demand instead
-    of bundling them all, at the cost of needing network access to read this one book.
+    differently from the others: as **350 scanned page images**, not extracted text. The
+    user's PDF interleaves Arabic and English tightly around every single hadith (unlike
+    Bahishti Zewar's continuous English prose) — text extraction was tried three different
+    ways (default, layout-preserving, and splitting each page into left/right column
+    images before reading) and genuinely scrambled sentence order every time, e.g. fusing
+    two unrelated hadith into one nonsense sentence. That's not an acceptable shortcut for
+    source text where misattributing what a hadith says actually matters, so instead each
+    PDF page (each one a two-book-page spread, matching how the original was scanned) was
+    rendered as a JPEG (`pdftoppm`, 85dpi/quality 40).
+    These page images are **hosted in Supabase Storage and fetched on demand**
+    (`screens/ScannedBookScreen.tsx`, `lib/scannedBooks.ts`) rather than bundled into the
+    app — an earlier version bundled all 350 images directly and grew the app's download
+    size by ~40MB (9MB → 49MB), which isn't sustainable with more scanned books planned.
+    The Storage-backed system is generic/reusable: a `scanned_books` table
+    (migration `0014_scanned_books.sql`) lists any book of this kind, and
+    `BooksHadithScreen` renders whatever's in that table automatically — so future scanned
+    books need **zero app code changes**, just running
+    `admin/scripts/upload-book-pages.js` once to upload that book's page images and add
+    its row. The tradeoff: reading this book now needs an internet connection (pages
+    aren't cached for offline use), whereas the old bundled version worked offline.
+    **The Muntakhab Ahadith pages themselves still need to be uploaded** — see the
+    "Action needed" note below.
   - **Bahishti Zewar (English)** is now a full entry in Books & Hadith — 93 chapters,
     bundled locally (`lib/bahishtiZewar.ts`, `assets/bahishtiZewar/chapters.json`, ~2MB),
     with a search box over chapter titles and a simple paragraph-by-paragraph reader
@@ -362,9 +369,27 @@ Worth keeping in mind if something looks broken again:
 - **Muntakhab Ahadith is page images, not searchable/selectable text** — see above. If a
   cleaner-scanned source PDF turns up later (Arabic and English on separate pages rather
   than interleaved per-hadith), text extraction could be revisited.
-- **App download size grew ~40MB** from bundling Muntakhab Ahadith's page images directly.
-  Worth moving to on-demand loading from Supabase Storage if that size becomes a real
-  problem for users on limited data.
+- **Action needed — run the new migration, then upload Muntakhab Ahadith's pages once:**
+  1. In the Supabase Dashboard, open **SQL Editor**, paste in the contents of
+     `supabase/migrations/0014_scanned_books.sql`, and run it — same as the other
+     migrations. This creates the Storage bucket and the `scanned_books` table.
+  2. The page images now load from Supabase Storage instead of being bundled in the app,
+     so they need to be uploaded there once. Run this from the `admin` folder (Command
+     Prompt), after getting your Supabase **service role** key from the Supabase dashboard
+     (Settings → API — see the instructions at the top of
+     `admin/scripts/upload-book-pages.js` for exactly where):
+  ```
+  set SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
+  node scripts\upload-book-pages.js --slug muntakhab-ahadith --title "Muntakhab Ahadith" --folder ..\mobile\assets\muntakhabAhadith\pages
+  ```
+  This reads the 350 page images you already have locally (from the earlier zip delivery)
+  and uploads them — nothing needs re-downloading. Until this is run, Muntakhab Ahadith
+  will still show in Books & Hadith but its pages won't load. The same script works for
+  **any future scanned book** — just point `--folder` at that book's images and give it a
+  new `--slug`/`--title`; no app update needed afterward.
+- Reading Muntakhab Ahadith now requires an internet connection (pages are fetched live
+  from Supabase Storage, not bundled), unlike the rest of the app which mostly works
+  offline. Worth adding local caching later if that becomes a problem for users.
 - Ramadan Timetable / Islamic Calendar dates are computed from a standard tabular
   Hijri calendar, not moon sighting — every screen using them says so, but they should
   still be treated as estimates, not an authoritative Ramadan/Eid announcement.

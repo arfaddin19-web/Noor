@@ -57,15 +57,11 @@ export const HADITH_BOOKS: HadithBook[] = [
     editionUr: "urd-ibnmajah",
     available: true,
   },
-  {
-    key: "muntakhab",
-    name: "Muntakhab Ahadith",
-    available: true,
-    // Not extracted to text like the others — shown as scanned page images
-    // instead (see lib/muntakhabAhadithPages.ts and the note at the top of
-    // MuntakhabAhadithScreen.tsx for why). BooksHadithScreen routes this key
-    // to its own screen instead of the generic HadithBook reader.
-  },
+  // Muntakhab Ahadith used to be listed here as a static entry, but it (and
+  // any future book shown as scanned page images rather than extracted
+  // text) is now listed dynamically from the `scanned_books` Supabase table
+  // instead — see lib/scannedBooks.ts and BooksHadithScreen.tsx. This keeps
+  // adding a new scanned book a zero-app-code-change operation.
   {
     key: "bahishti",
     name: "Bahishti Zewar",

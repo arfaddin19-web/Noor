@@ -21,7 +21,7 @@ import BooksHadithScreen from "./screens/BooksHadithScreen";
 import HadithBookScreen from "./screens/HadithBookScreen";
 import BahishtiZewarScreen from "./screens/BahishtiZewarScreen";
 import BahishtiZewarChapterScreen from "./screens/BahishtiZewarChapterScreen";
-import MuntakhabAhadithScreen from "./screens/MuntakhabAhadithScreen";
+import ScannedBookScreen from "./screens/ScannedBookScreen";
 import TasbihScreen from "./screens/TasbihScreen";
 import DuaScreen from "./screens/DuaScreen";
 import DonateScreen from "./screens/DonateScreen";
@@ -53,7 +53,7 @@ export type HomeStackParamList = {
   HadithBook: { key: string };
   BahishtiZewar: undefined;
   BahishtiZewarChapter: { id: number };
-  MuntakhabAhadith: undefined;
+  ScannedBook: { slug: string; title: string; pageCount: number };
   Tasbih: undefined;
   Dua: undefined;
   Donate: undefined;
@@ -115,17 +115,17 @@ function HomeStackNavigator() {
         options={{ title: "Bahishti Zewar" }}
       />
       <HomeStack.Screen
-        name="MuntakhabAhadith"
-        component={MuntakhabAhadithScreen}
-        options={{
-          title: "Muntakhab Ahadith",
+        name="ScannedBook"
+        component={ScannedBookScreen}
+        options={({ route }) => ({
+          title: route.params.title,
           // Dark header to match the page-viewer's dark background, same
           // treatment as the Qibla screen.
           headerStyle: { backgroundColor: "#1a1a1a" },
           headerBackground: undefined,
           headerTintColor: "white",
           headerTitleStyle: { color: "white", fontWeight: "700" },
-        }}
+        })}
       />
       <HomeStack.Screen name="Tasbih" component={TasbihScreen} options={{ title: "Tasbih" }} />
       <HomeStack.Screen name="Dua" component={DuaScreen} options={{ title: "Dua" }} />
