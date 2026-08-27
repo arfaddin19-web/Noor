@@ -92,15 +92,12 @@ up correctly in the mobile app.
     the app's usual emerald gradient, which clashed with it). A small drawn Kaaba icon
     (not the 🕋 emoji, which renders inconsistently across devices/fonts) sits directly on
     the dial at the Qibla bearing — in place of whatever plain tick would otherwise be
-    there — with the needle pointing at it. The photo's red arc — there, between current
-    heading and true north — is reinterpreted here as the arc between current heading and
-    the **Kaaba** (`AlignmentArc`, via `react-native-svg`, newly added as a dependency —
-    the exact version Expo SDK 54 bundles, `expo/bundledNativeModules.json`), which is
-    both visually faithful to the reference and more useful for this app's actual purpose:
-    a glance at the arc shows how far off you are and which way to turn. Alignment means
-    that icon meets the fixed top pointer, at which point the arc disappears. (Intentionally
-    skipped: a live map thumbnail and raw GPS coordinates — decorative, not core
-    functionality for a Qibla-finding screen.)
+    there — with the needle pointing at it; alignment means that icon meets the fixed top
+    pointer. (Tried adding the photo's red arc — there, between current heading and true
+    north; reinterpreted here as current-heading-to-Kaaba — via a new `react-native-svg`
+    dependency, but the user asked for it back out, so it and the dependency were both
+    removed again.) (Intentionally skipped: a live map thumbnail and raw GPS coordinates —
+    decorative, not core functionality for a Qibla-finding screen.)
   - **Qur'an list**: "Last Read" hero card (jumps back into whichever Surah/Juz/Page you
     last opened), a **Bookmarks** row (long-press a chip to remove it), a Sura/Page/Juz
     underline-tab toggle, 8-point star badges on Surah/Juz rows, and a 604-tile Page grid.

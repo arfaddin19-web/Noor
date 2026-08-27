@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Animated, StyleSheet, Text, View } from "react-native";
-import Svg, { Circle } from "react-native-svg";
 import * as Location from "expo-location";
 import { useTheme } from "../lib/ThemeContext";
 import type { Theme } from "../theme";
@@ -13,7 +12,6 @@ const RING_SIZE = 250;
 const TICK_RADIUS = 115;
 const LABEL_RADIUS = 90;
 const KAABA_RADIUS = 104;
-const ARC_RADIUS = RING_SIZE / 2 - 6;
 const ALIGN_TOLERANCE_DEG = 6;
 
 // Apple Compass-style dial: big cardinal letters at N/E/S/W, plain degree
@@ -121,39 +119,6 @@ function CompassMark({
   );
 }
 
-/** The red band between the fixed top pointer (where you're currently facing)
- *  and the Qibla bearing, drawn the short way round — at a glance, shows how
- *  far off you are and which way to turn, the same idea as the reference
- *  photo's red arc (there, between the current heading and true north; here,
- *  between current heading and the Kaaba, which is what this screen is for). */
-function AlignmentArc({ sweepDeg, size, radius }: { sweepDeg: number; size: number; radius: number }) {
-  const circumference = 2 * Math.PI * radius;
-  const sweepLength = (Math.abs(sweepDeg) / 360) * circumference;
-  // SVG circles start their stroke at the 3-o'clock point and draw clockwise;
-  // rotate -90° to start at the top (the fixed pointer), then further offset
-  // by the sweep's start point when it runs counter-clockwise from there.
-  const rotation = -90 + Math.min(0, sweepDeg);
-
-  if (Math.abs(sweepDeg) < 1) return null;
-
-  return (
-    <Svg width={size} height={size} style={StyleSheet.absoluteFill}>
-      <Circle
-        cx={size / 2}
-        cy={size / 2}
-        r={radius}
-        stroke="#e0342a"
-        strokeWidth={7}
-        strokeLinecap="round"
-        fill="none"
-        strokeDasharray={`${sweepLength}, ${circumference}`}
-        rotation={rotation}
-        origin={`${size / 2}, ${size / 2}`}
-      />
-    </Svg>
-  );
-}
-
 /** A small drawn Kaaba icon — a black cube with the gold-embroidered band
  *  (kiswah) near the top — instead of the 🕋 emoji, which renders
  *  inconsistently across devices/fonts, same reasoning as the rest of the
@@ -248,14 +213,6 @@ export default function QiblaScreen() {
         <View style={[styles.fixedPointer, isAligned && styles.fixedPointerAligned]} />
 
         <View style={styles.compassRing} />
-
-        {!isAligned && (
-          <AlignmentArc
-            sweepDeg={angleDiff(heading, qiblaBearing)}
-            size={RING_SIZE}
-            radius={ARC_RADIUS}
-          />
-        )}
 
         <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ rotate: dialSpin }] }]}>
           {TICKS.map((deg) => {
