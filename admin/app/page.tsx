@@ -29,6 +29,8 @@ function Overview() {
   });
   const [genderCounts, setGenderCounts] = useState({ male: 0, female: 0, unspecified: 0 });
   const [topCities, setTopCities] = useState<CityCount[]>([]);
+  const [topOccupations, setTopOccupations] = useState<CityCount[]>([]);
+  const [premiumCount, setPremiumCount] = useState(0);
 
   useEffect(() => {
     async function load() {
@@ -38,7 +40,7 @@ function Overview() {
         supabase.from("ai_qa_history").select("*", { count: "exact", head: true }),
         supabase.from("locations").select("*", { count: "exact", head: true }),
         supabase.from("registrations").select("*", { count: "exact", head: true }),
-        supabase.from("registrations").select("city, gender"),
+        supabase.from("registrations").select("city, gender, occupation, is_premium"),
       ]);
       setCounts({
         masjids: masjids.count ?? 0,
@@ -48,18 +50,34 @@ function Overview() {
         users: users.count ?? 0,
       });
 
-      const rows = (registrations.data as { city: string | null; gender: string | null }[]) ?? [];
-      let male = 0, female = 0, unspecified = 0;
+      const rows =
+        (registrations.data as {
+          city: string | null;
+          gender: string | null;
+          occupation: string | null;
+          is_premium: boolean;
+        }[]) ?? [];
+      let male = 0, female = 0, unspecified = 0, premium = 0;
       const cityMap = new Map<string, number>();
+      const occupationMap = new Map<string, number>();
       for (const r of rows) {
         if (r.gender === "male") male++;
         else if (r.gender === "female") female++;
         else unspecified++;
+        if (r.is_premium) premium++;
         if (r.city) cityMap.set(r.city, (cityMap.get(r.city) ?? 0) + 1);
+        if (r.occupation) occupationMap.set(r.occupation, (occupationMap.get(r.occupation) ?? 0) + 1);
       }
       setGenderCounts({ male, female, unspecified });
+      setPremiumCount(premium);
       setTopCities(
         Array.from(cityMap.entries())
+          .map(([city, count]) => ({ city, count }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 8)
+      );
+      setTopOccupations(
+        Array.from(occupationMap.entries())
           .map(([city, count]) => ({ city, count }))
           .sort((a, b) => b.count - a.count)
           .slice(0, 8)
@@ -82,11 +100,12 @@ function Overview() {
 
       <h2 className="mb-3 mt-8 text-lg font-semibold">Community (from registrations)</h2>
       <p className="mb-4 text-sm text-gray-500">
-        Collected when someone registers in the app (name, phone, city, gender — no password,
-        no login) — self-reported, not verified. Only from people who registered
-        (most masjid/prayer-time features work without it).
+        Collected when someone registers in the app (name, city, gender, occupation — no
+        password, no phone number, no login) — self-reported, not verified. Only from
+        people who registered (most masjid/prayer-time features work without it).
+        {premiumCount > 0 && ` ${premiumCount} of them ${premiumCount === 1 ? "has" : "have"} Noor Premium.`}
       </p>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="rounded-xl border border-gray-200 bg-white p-5">
           <p className="mb-3 text-sm text-gray-500">By gender</p>
           <div className="space-y-2 text-sm">
@@ -104,6 +123,21 @@ function Overview() {
           ) : (
             <div className="space-y-2 text-sm">
               {topCities.map((c) => (
+                <div key={c.city} className="flex justify-between">
+                  <span>{c.city}</span>
+                  <span className="font-medium">{c.count}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="rounded-xl border border-gray-200 bg-white p-5">
+          <p className="mb-3 text-sm text-gray-500">Top occupations</p>
+          {topOccupations.length === 0 ? (
+            <p className="text-sm text-gray-400">No occupation data yet.</p>
+          ) : (
+            <div className="space-y-2 text-sm">
+              {topOccupations.map((c) => (
                 <div key={c.city} className="flex justify-between">
                   <span>{c.city}</span>
                   <span className="font-medium">{c.count}</span>

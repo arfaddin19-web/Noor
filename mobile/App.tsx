@@ -34,6 +34,7 @@ import MasjidDetailScreen from "./screens/MasjidDetailScreen";
 import HalalFoodDetailScreen from "./screens/HalalFoodDetailScreen";
 import AskAiScreen from "./screens/AskAiScreen";
 import AccountScreen from "./screens/AccountScreen";
+import PremiumScreen from "./screens/PremiumScreen";
 import { setupAndroidNotificationChannel } from "./lib/notifications";
 import { hasSeenOnboarding, markOnboardingSeen } from "./lib/onboarding";
 import { isMasjidSetupDone } from "./lib/homeMasjid";
@@ -63,6 +64,7 @@ export type HomeStackParamList = {
   HalalFood: undefined;
   MasjidDetail: { id: string };
   HalalFoodDetail: { id: string };
+  Premium: undefined;
 };
 
 export type RootStackParamList = {
@@ -152,6 +154,7 @@ function HomeStackNavigator() {
         component={HalalFoodDetailScreen}
         options={{ title: "Halal Food" }}
       />
+      <HomeStack.Screen name="Premium" component={PremiumScreen} options={{ title: "Noor Premium" }} />
     </HomeStack.Navigator>
   );
 }

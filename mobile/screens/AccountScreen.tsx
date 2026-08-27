@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import ScreenBackground from "../components/ScreenBackground";
 import { supabase } from "../lib/supabase";
@@ -18,7 +18,7 @@ import { useRegistration } from "../lib/useRegistration";
 import { clearLocalRegistration, Gender, registerUser, Registration } from "../lib/registration";
 import { getHomeCity, getHomeMasjidId } from "../lib/homeMasjid";
 import { rootNavigate } from "../lib/navigationRef";
-import { isValidPhone } from "../lib/phoneAuth";
+import { isPremium } from "../lib/premium";
 import { useTheme } from "../lib/ThemeContext";
 import type { Theme } from "../theme";
 
@@ -86,8 +86,8 @@ function RegisterForm({
   onRegistered: () => void;
 }) {
   const [fullName, setFullName] = useState("");
-  const [phone, setPhone] = useState("");
   const [city, setCity] = useState("");
+  const [occupation, setOccupation] = useState("");
   const [gender, setGender] = useState<Gender | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -99,17 +99,13 @@ function RegisterForm({
       setError("Enter your full name.");
       return;
     }
-    if (!isValidPhone(phone)) {
-      setError("Enter a valid phone number.");
-      return;
-    }
     if (!gender) {
       setError("Select male or female.");
       return;
     }
 
     setLoading(true);
-    const result = await registerUser({ fullName, phone, city, gender });
+    const result = await registerUser({ fullName, city, gender, occupation });
     setLoading(false);
 
     if (result.ok) {
@@ -124,7 +120,7 @@ function RegisterForm({
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Register</Text>
         <Text style={styles.cardSubtitle}>
-          Just your details, no password — this helps us know who's using Noor.
+          Just your details, no password, no phone number — this helps us know who's using Noor.
         </Text>
 
         <TextInput
@@ -135,19 +131,17 @@ function RegisterForm({
           style={styles.input}
         />
         <TextInput
-          placeholder="Phone number"
-          placeholderTextColor={theme.colors.textMuted}
-          autoCapitalize="none"
-          keyboardType="phone-pad"
-          value={phone}
-          onChangeText={setPhone}
-          style={styles.input}
-        />
-        <TextInput
           placeholder="City / District"
           placeholderTextColor={theme.colors.textMuted}
           value={city}
           onChangeText={setCity}
+          style={styles.input}
+        />
+        <TextInput
+          placeholder="Occupation"
+          placeholderTextColor={theme.colors.textMuted}
+          value={occupation}
+          onChangeText={setOccupation}
           style={styles.input}
         />
         <View style={styles.genderRow}>
@@ -185,6 +179,9 @@ function ProfileView({
   styles: ReturnType<typeof makeStyles>;
   onCleared: () => void;
 }) {
+  const navigation = useNavigation<any>();
+  const premium = isPremium(registration);
+
   async function switchProfile() {
     await clearLocalRegistration();
     onCleared();
@@ -197,11 +194,20 @@ function ProfileView({
           <Text style={styles.avatarText}>{registration.full_name.charAt(0).toUpperCase()}</Text>
         </View>
         <Text style={styles.cardTitle}>{registration.full_name}</Text>
-        {(registration.phone || registration.city) && (
+        {(registration.occupation || registration.city) && (
           <Text style={styles.cardSubtitle}>
-            {[registration.phone, registration.city].filter(Boolean).join(" — ")}
+            {[registration.occupation, registration.city].filter(Boolean).join(" — ")}
           </Text>
         )}
+        <TouchableOpacity
+          style={[styles.premiumBadge, premium && styles.premiumBadgeActive]}
+          onPress={() => navigation.navigate("Home", { screen: "Premium" })}
+        >
+          <Ionicons name="star" size={13} color={premium ? "#3a2a00" : theme.colors.accent} />
+          <Text style={[styles.premiumBadgeText, premium && styles.premiumBadgeTextActive]}>
+            {premium ? "Noor Premium" : "Get Noor Premium"}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       <TouchableOpacity style={styles.signOutButton} onPress={switchProfile}>
@@ -265,6 +271,19 @@ function makeStyles(theme: Theme) {
       marginBottom: 10,
     },
     avatarText: { color: "white", fontSize: 20, fontWeight: "700" },
+    premiumBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 5,
+      marginTop: 10,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: theme.radius.pill,
+      backgroundColor: theme.colors.pageBg,
+    },
+    premiumBadgeActive: { backgroundColor: theme.colors.gold },
+    premiumBadgeText: { fontSize: 12, fontWeight: "700", color: theme.colors.accent },
+    premiumBadgeTextActive: { color: "#3a2a00" },
     input: {
       width: "100%",
       borderWidth: 1,

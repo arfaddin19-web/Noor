@@ -11,17 +11,48 @@ const emptyForm = {
   name: "", address: "", city: "", latitude: "", longitude: "", phone: "", description: "",
 };
 
-const JAMAT_FIELDS: { key: keyof Masjid; label: string }[] = [
-  { key: "fajr_jamat", label: "Fajr" },
-  { key: "dhuhr_jamat", label: "Dhuhr" },
-  { key: "asr_jamat", label: "Asr" },
-  { key: "maghrib_jamat", label: "Maghrib" },
-  { key: "isha_jamat", label: "Isha" },
-  { key: "jumma_jamat", label: "Jumu'ah" },
+// Each Jamat field pairs the flat masjids column (the fallback, used when a
+// masjid has no yearly calendar uploaded) with the matching column on
+// today's row in masjid_jamat_times (used when it does — see JAMAT_TODAY
+// below for why the boxes need to show *that*, not the flat columns, once a
+// calendar exists).
+const JAMAT_FIELDS: { key: keyof Masjid; todayKey: keyof TodayJamat; label: string }[] = [
+  { key: "fajr_jamat", todayKey: "fajr", label: "Fajr" },
+  { key: "dhuhr_jamat", todayKey: "dhuhr", label: "Dhuhr" },
+  { key: "asr_jamat", todayKey: "asr", label: "Asr" },
+  { key: "maghrib_jamat", todayKey: "maghrib", label: "Maghrib" },
+  { key: "isha_jamat", todayKey: "isha", label: "Isha" },
+  { key: "jumma_jamat", todayKey: "jumma", label: "Jumu'ah" },
 ];
+
+interface TodayJamat {
+  fajr: string | null;
+  dhuhr: string | null;
+  asr: string | null;
+  maghrib: string | null;
+  isha: string | null;
+  jumma: string | null;
+}
+
+function trimSeconds(t: string | null): string {
+  return t ? t.slice(0, 5) : "";
+}
+
+function todayMonthDay() {
+  const now = new Date();
+  return { month: now.getMonth() + 1, day: now.getDate() };
+}
 
 function MasjidsManager() {
   const [items, setItems] = useState<Masjid[]>([]);
+  // Today's row from each masjid's yearly calendar (masjid_id -> row), for
+  // masjids that have uploaded one. Once a masjid has this, the quick-edit
+  // boxes below show (and Save writes to) *this*, not the flat masjids
+  // columns — otherwise the boxes looked permanently blank after uploading
+  // a CSV, since the CSV only ever wrote to masjid_jamat_times.
+  const [todayJamat, setTodayJamat] = useState<Record<string, TodayJamat>>({});
+  // Local, unsaved edits to the boxes, keyed by masjid id then field.
+  const [edits, setEdits] = useState<Record<string, Partial<Record<keyof TodayJamat, string>>>>({});
   const [form, setForm] = useState(emptyForm);
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -30,12 +61,34 @@ function MasjidsManager() {
 
   async function load() {
     setLoading(true);
-    const { data } = await supabase.from("masjids").select("*").order("created_at", { ascending: false });
+    const { month, day } = todayMonthDay();
+    const [{ data }, { data: jamatRows }] = await Promise.all([
+      supabase.from("masjids").select("*").order("created_at", { ascending: false }),
+      supabase
+        .from("masjid_jamat_times")
+        .select("masjid_id, fajr, dhuhr, asr, maghrib, isha, jumma")
+        .eq("month", month)
+        .eq("day", day),
+    ]);
     setItems((data as Masjid[]) ?? []);
+    const map: Record<string, TodayJamat> = {};
+    (jamatRows as (TodayJamat & { masjid_id: string })[] | null ?? []).forEach((r) => {
+      map[r.masjid_id] = r;
+    });
+    setTodayJamat(map);
+    setEdits({});
     setLoading(false);
   }
 
   useEffect(() => { load(); }, []);
+
+  function displayValue(item: Masjid, field: (typeof JAMAT_FIELDS)[number]): string {
+    const edited = edits[item.id]?.[field.todayKey];
+    if (edited !== undefined) return edited;
+    const today = todayJamat[item.id];
+    if (today) return trimSeconds(today[field.todayKey]);
+    return (item[field.key] as string) ?? "";
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -55,25 +108,66 @@ function MasjidsManager() {
     load();
   }
 
-  function updateJamat(item: Masjid, field: keyof Masjid, value: string) {
-    setItems((prev) =>
-      prev.map((m) => (m.id === item.id ? { ...m, [field]: value } : m))
-    );
+  function updateJamat(item: Masjid, todayKey: keyof TodayJamat, value: string) {
+    setEdits((prev) => ({ ...prev, [item.id]: { ...prev[item.id], [todayKey]: value } }));
   }
 
   async function saveJamat(item: Masjid) {
     setSavingId(item.id);
-    await supabase
-      .from("masjids")
-      .update({
-        fajr_jamat: item.fajr_jamat || null,
-        dhuhr_jamat: item.dhuhr_jamat || null,
-        asr_jamat: item.asr_jamat || null,
-        maghrib_jamat: item.maghrib_jamat || null,
-        isha_jamat: item.isha_jamat || null,
-        jumma_jamat: item.jumma_jamat || null,
-      })
-      .eq("id", item.id);
+    const values: Record<keyof TodayJamat, string> = {
+      fajr: "", dhuhr: "", asr: "", maghrib: "", isha: "", jumma: "",
+    };
+    for (const f of JAMAT_FIELDS) values[f.todayKey] = displayValue(item, f);
+
+    if (todayJamat[item.id]) {
+      // This masjid has a yearly calendar — the edit is a correction to
+      // *today's* row specifically, not the flat fallback fields.
+      const { month, day } = todayMonthDay();
+      await supabase
+        .from("masjid_jamat_times")
+        .update({
+          fajr: values.fajr || null,
+          dhuhr: values.dhuhr || null,
+          asr: values.asr || null,
+          maghrib: values.maghrib || null,
+          isha: values.isha || null,
+          jumma: values.jumma || null,
+        })
+        .eq("masjid_id", item.id)
+        .eq("month", month)
+        .eq("day", day);
+      setTodayJamat((prev) => ({ ...prev, [item.id]: values }));
+    } else {
+      // No yearly calendar for this masjid — same as before, a single
+      // fixed time per prayer.
+      await supabase
+        .from("masjids")
+        .update({
+          fajr_jamat: values.fajr || null,
+          dhuhr_jamat: values.dhuhr || null,
+          asr_jamat: values.asr || null,
+          maghrib_jamat: values.maghrib || null,
+          isha_jamat: values.isha || null,
+          jumma_jamat: values.jumma || null,
+        })
+        .eq("id", item.id);
+      setItems((prev) =>
+        prev.map((m) =>
+          m.id === item.id
+            ? {
+                ...m,
+                fajr_jamat: values.fajr || null,
+                dhuhr_jamat: values.dhuhr || null,
+                asr_jamat: values.asr || null,
+                maghrib_jamat: values.maghrib || null,
+                isha_jamat: values.isha || null,
+                jumma_jamat: values.jumma || null,
+              }
+            : m
+        )
+      );
+    }
+    setEdits((prev) => ({ ...prev, [item.id]: {} }));
     setSavingId(null);
   }
 
@@ -112,6 +206,10 @@ function MasjidsManager() {
 
       <p className="mb-2 text-xs text-gray-400">
         Set each masjid's Jamat times below, then click Save on that row. Times are 24h (e.g. 13:15).
+        For a masjid with a yearly calendar uploaded (see "Yearly ▾"), these boxes show and edit
+        <em> today's</em> row from that calendar, not a single fixed time — a quick way to fix one
+        day without re-uploading the whole file. For a masjid with no yearly calendar, they edit its
+        one fixed time as before.
       </p>
       <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
         <table className="w-full text-sm">
@@ -138,12 +236,17 @@ function MasjidsManager() {
                       {[item.city, item.address].filter(Boolean).join(" — ")}
                     </div>
                   )}
+                  {todayJamat[item.id] && (
+                    <div className="mt-0.5 text-[10px] font-normal text-noor-700">
+                      Today's row from yearly calendar
+                    </div>
+                  )}
                 </td>
                 {JAMAT_FIELDS.map((f) => (
                   <td key={f.key} className="px-3 py-1">
                     <input
-                      value={(item[f.key] as string) ?? ""}
-                      onChange={(e) => updateJamat(item, f.key, e.target.value)}
+                      value={displayValue(item, f)}
+                      onChange={(e) => updateJamat(item, f.todayKey, e.target.value)}
                       placeholder="--:--"
                       className="w-16 rounded border border-gray-200 px-2 py-1 text-xs"
                     />
@@ -177,7 +280,7 @@ function MasjidsManager() {
               {expandedId === item.id && (
                 <tr className="border-t border-gray-100 bg-gray-50/50">
                   <td colSpan={9} className="px-3 py-3">
-                    <JamatCalendarUpload masjidId={item.id} masjidName={item.name} />
+                    <JamatCalendarUpload masjidId={item.id} masjidName={item.name} onChange={load} />
                   </td>
                 </tr>
               )}

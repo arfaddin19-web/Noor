@@ -1,6 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "./supabase";
-import { normalizePhone } from "./phoneAuth";
 
 const STORAGE_KEY = "noor.registration";
 
@@ -9,9 +8,10 @@ export type Gender = "male" | "female";
 export interface Registration {
   id: string;
   full_name: string;
-  phone: string;
   city: string | null;
   gender: Gender | null;
+  occupation: string | null;
+  is_premium: boolean;
 }
 
 export async function getLocalRegistration(): Promise<Registration | null> {
@@ -33,52 +33,52 @@ export async function clearLocalRegistration(): Promise<void> {
 }
 
 export type RegisterResult =
-  | { ok: true; registration: Registration; recovered: boolean }
+  | { ok: true; registration: Registration }
   | { ok: false; error: string };
 
-/** Registers a new phone number, or — if that number is already registered
- *  (e.g. the app was reinstalled and lost its local record) — recovers the
- *  existing record instead of failing. No password involved either way. */
+/** One-time, no-password registration: Name, City, Gender, Occupation. No
+ *  phone number (dropped — it was never verified, so anyone could type
+ *  anyone else's) and no recovery-by-identifier: a reinstalled app just
+ *  registers fresh, same as any other on-device-only preference. */
 export async function registerUser(input: {
   fullName: string;
-  phone: string;
   city: string;
   gender: Gender;
+  occupation: string;
 }): Promise<RegisterResult> {
-  const phone = normalizePhone(input.phone);
-
   const { data, error } = await supabase
     .from("registrations")
     .insert({
       full_name: input.fullName.trim(),
-      phone,
       city: input.city.trim() || null,
       gender: input.gender,
+      occupation: input.occupation.trim() || null,
     })
-    .select("id, full_name, phone, city, gender")
+    .select("id, full_name, city, gender, occupation, is_premium")
     .single();
 
   if (!error && data) {
     const registration = data as Registration;
     await saveLocalRegistration(registration);
-    return { ok: true, registration, recovered: false };
-  }
-
-  // Postgres unique_violation — this phone is already registered. Recover
-  // the existing record rather than treating it as a hard failure.
-  if (error?.code === "23505") {
-    const { data: existing, error: lookupError } = await supabase.rpc(
-      "find_registration_by_phone",
-      { p_phone: phone }
-    );
-    const row = Array.isArray(existing) ? existing[0] : existing;
-    if (!lookupError && row) {
-      const registration = row as Registration;
-      await saveLocalRegistration(registration);
-      return { ok: true, registration, recovered: true };
-    }
-    return { ok: false, error: "That phone number is already registered." };
+    return { ok: true, registration };
   }
 
   return { ok: false, error: "Couldn't register — check your connection and try again." };
+}
+
+/** Re-fetches this device's registration row from the server (e.g. to pick
+ *  up an is_premium flag an admin just granted) and updates the local copy.
+ *  No-op if this device was never registered. */
+export async function refreshRegistration(): Promise<Registration | null> {
+  const local = await getLocalRegistration();
+  if (!local) return null;
+  // registrations has no general SELECT policy (only admins can browse it) —
+  // this narrow RPC returns only the one row whose exact id is already
+  // known locally. See 0017_registration_no_phone.sql.
+  const { data } = await supabase.rpc("get_registration", { p_id: local.id });
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) return local;
+  const registration = row as Registration;
+  await saveLocalRegistration(registration);
+  return registration;
 }

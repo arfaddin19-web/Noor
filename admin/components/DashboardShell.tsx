@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase";
 
 const NAV = [
   { href: "/", label: "Overview" },
+  { href: "/registrations", label: "Registrations" },
   { href: "/prayer-times", label: "Prayer Times" },
   { href: "/masjids", label: "Masjids" },
   { href: "/halal-food", label: "Halal Food" },

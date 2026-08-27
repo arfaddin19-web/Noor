@@ -1,12 +1,15 @@
 import React, { useMemo } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
 import ScreenBackground from "../components/ScreenBackground";
 import {
   useNotificationSettings,
   useAdhanSoundSetting,
   useHadithNotificationSetting,
 } from "../lib/notifications";
+import { useRegistration } from "../lib/useRegistration";
+import { isPremium } from "../lib/premium";
 import { useThemeMode } from "../lib/ThemeContext";
 import type { Theme } from "../theme";
 
@@ -16,16 +19,19 @@ function Row({
   subtitle,
   theme,
   right,
+  onPress,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   subtitle: string;
   theme: Theme;
   right: React.ReactNode;
+  onPress?: () => void;
 }) {
   const styles = useMemo(() => makeStyles(theme), [theme]);
+  const Wrapper = onPress ? TouchableOpacity : View;
   return (
-    <View style={styles.row}>
+    <Wrapper style={styles.row} onPress={onPress}>
       <View style={styles.rowIconWrap}>
         <Ionicons name={icon} size={20} color={theme.colors.accent} />
       </View>
@@ -34,7 +40,7 @@ function Row({
         <Text style={styles.rowSubtitle}>{subtitle}</Text>
       </View>
       {right}
-    </View>
+    </Wrapper>
   );
 }
 
@@ -44,6 +50,11 @@ export default function SettingsScreen() {
   const notifs = useNotificationSettings();
   const adhanSound = useAdhanSoundSetting();
   const hadithNotifs = useHadithNotificationSetting();
+  const { registration } = useRegistration();
+  const premium = isPremium(registration);
+  // Settings is a bottom tab, sibling to the Home stack that Premium lives
+  // in — needs the nested-navigator form, not a plain navigate().
+  const navigation = useNavigation<any>();
 
   return (
     <ScreenBackground>
@@ -113,6 +124,22 @@ export default function SettingsScreen() {
               onValueChange={(v) => setMode(v ? "dark" : "light")}
             />
           }
+        />
+      </View>
+
+      <Text style={styles.sectionTitle}>Noor Premium</Text>
+      <View style={[styles.card, theme.cardShadow]}>
+        <Row
+          icon="star-outline"
+          label={premium ? "Noor Premium" : "Get Noor Premium"}
+          subtitle={
+            premium
+              ? "You have Premium — thank you for supporting Noor."
+              : "Audio recitation, more Adhan sounds, and more — coming soon."
+          }
+          theme={theme}
+          right={<Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />}
+          onPress={() => navigation.navigate("Home", { screen: "Premium" })}
         />
       </View>
 

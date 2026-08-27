@@ -11,14 +11,15 @@ export interface Profile {
   created_at: string;
 }
 
-// One row per person who registered in the mobile app (Name/Phone/City/
-// Gender, no password) — see mobile/lib/registration.ts.
+// One row per person who registered in the mobile app (Name/City/Gender/
+// Occupation, no password, no phone number) — see mobile/lib/registration.ts.
 export interface Registration {
   id: string;
   full_name: string;
-  phone: string;
   city: string | null;
   gender: "male" | "female" | null;
+  occupation: string | null;
+  is_premium: boolean;
   created_at: string;
 }
 

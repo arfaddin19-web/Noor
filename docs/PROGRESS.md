@@ -290,25 +290,53 @@ up correctly in the mobile app.
     correct upcoming prayer, which may now differ from the "Next prayer" column above
     it. The banner is also now tappable, opening that masjid's full detail/day-table
     screen.
+    Also fixed the admin dashboard's Masjids quick-edit boxes: after uploading a yearly
+    calendar via "Yearly ▾", the Fajr/Dhuhr/Asr/Maghrib/Isha/Jumu'ah boxes above kept
+    showing blank, because they were bound to the old single-value fallback columns,
+    which a CSV upload never touches. They now show **today's actual row** from the
+    yearly calendar when one exists (with a small "Today's row from yearly calendar"
+    note so it's clear what's being edited), and Save writes back to that same day —
+    a quick way to fix one day's time without re-uploading the whole file. A masjid
+    with no yearly calendar still edits its single fixed time exactly as before.
   - **Ask**: AI Q&A chat UI wired to and verified working against the deployed
     `ask-ai` Supabase Edge Function (see below).
-  - **Account is now a one-time registration, no password at all** — Name, Phone,
-    City, Gender, submitted once and stored locally on the device (no login, no
-    session). This replaced two earlier password-based attempts (a synthetic-email
-    hack that Supabase's Auth server rejected outright, then Supabase's native phone
-    provider, which needed a dashboard toggle that didn't get switched on) — both
-    turned into repeated friction, so sign-up with a password was dropped entirely.
-    `registrations` is a plain table (`supabase/migrations/0013_simple_registration.sql`)
-    completely separate from `auth.users`/`profiles` — anyone can insert their own row
-    (no session to scope it to), nobody can browse the table, and a `find_registration_by_phone`
-    function lets a reinstalled app recover its existing row by phone number instead of
-    creating a duplicate. `lib/registration.ts` handles the insert/recovery,
+  - **Account is a one-time registration, no password at all** — Name, City, Gender,
+    Occupation, submitted once and stored locally on the device (no login, no session).
+    This replaced two earlier password-based attempts (a synthetic-email hack that
+    Supabase's Auth server rejected outright, then Supabase's native phone provider,
+    which needed a dashboard toggle that didn't get switched on) — both turned into
+    repeated friction, so sign-up with a password was dropped entirely.
+    **Phone number was later dropped too** (`0017_registration_no_phone.sql`) — it was
+    never verified, so anyone could type anyone else's number, making it useless as an
+    identifier and a real privacy footgun (imagine seeing someone else's number tied to
+    "your" account). Occupation was added in its place. This also removed the
+    "recover an existing registration by phone" path (`find_registration_by_phone`) — a
+    reinstalled app now just registers fresh, an accepted tradeoff since that recovery
+    was only ever built on an unverified number anyway, never a real account.
+    `registrations` is a plain table completely separate from `auth.users`/`profiles` —
+    anyone can insert their own row (no session to scope it to), and only admins can
+    browse it (a narrow `get_registration(id)` function lets a device re-fetch its own
+    row by the random UUID it already has locally, e.g. to notice a premium grant — see
+    below — same shape as the old phone lookup but keyed on an unguessable ID instead of
+    a real-world number). `lib/registration.ts` handles insert/refresh,
     `lib/useRegistration.ts` reads the local copy (`AsyncStorage`) so Home can show
-    "Assalamu alaikum, {name}" without any login. City/gender feed the admin
+    "Assalamu alaikum, {name}" without any login. City/gender/occupation feed the admin
     dashboard's population stats — see below. Plus "Your Masjid" picker, and a
-    "Not you? Switch profile" action that clears the local record. *Not phone-verified*
-    — anyone can type any number, the same tradeoff as before, just without a password
-    wrapped around it.
+    "Not you? Switch profile" action that clears the local record.
+  - **Noor Premium (scaffolding only — no feature actually gated yet)**: the plan is a
+    paid tier unlocking things like Qur'an audio recitation and more Adhan sound choices
+    as they're built. `registrations.is_premium` (`0017_registration_no_phone.sql`) is
+    the flag; for now it can only be granted **manually by an admin** from the new
+    **Registrations** page in the dashboard (`admin/app/registrations/page.tsx` — search,
+    view everyone who registered, toggle Premium per person) — there's no in-app
+    purchase flow, because that genuinely can't exist until the app is distributed
+    through the App Store / Google Play (in-app purchases are a store-level mechanism,
+    not something Expo Go or a bare bundle can do). `mobile/screens/PremiumScreen.tsx`
+    ("Noor Premium", reachable from Settings and a badge on Account) lists what's coming
+    and is honest that purchasing isn't available yet — no fake "Buy now" button.
+    `mobile/components/PremiumGate.tsx` is a reusable wrapper ready for when a real
+    feature needs to check `lib/premium.ts`'s `isPremium()` — nothing uses it yet since
+    nothing premium is built yet.
   - Navigation is now **4 bottom tabs — Home / Ask / Settings / Account** — with
     everything else (Qibla, Qur'an, Books & Hadith, Tasbih, Dua, Donate, Islamic
     Calendar, Community Help, Masjids, Halal Food) reached via Home's icon grid/stack.
@@ -388,15 +416,18 @@ Worth keeping in mind if something looks broken again:
 
 - User needs to add billing credits on console.anthropic.com for Ask AI to actually
   respond (see above — everything on our side is confirmed working).
-- **Registration is not phone-verified** — anyone can type any number; real
-  verification would need a paid SMS/OTP provider (e.g. Twilio) wired in as a genuine
-  extra step, since registration no longer goes through Supabase Auth at all (see
-  above). Worth doing if the population data needs to be trustworthy, not just
-  self-reported. No login/social sign-in of any kind is planned — the whole point of
-  this model is that there isn't one.
-- **No Supabase Dashboard steps needed for registration to work** — unlike the two
-  earlier password-based attempts, this one only needs `0013_simple_registration.sql`
-  run; nothing to toggle in Authentication settings.
+- **Registration has no phone number at all now** (dropped, see above) — nothing to
+  verify, and nothing more to do here. No login/social sign-in of any kind is
+  planned — the whole point of this model is that there isn't one.
+- **Action needed — run the new registration migration:** paste
+  `supabase/migrations/0017_registration_no_phone.sql` into the Supabase SQL Editor and
+  run it — same as every migration. Until then the app's registration form (which now
+  submits city/gender/occupation, no phone) will fail to insert, since the `phone`
+  column is still required (`not null`) on the live table until this runs.
+- **Noor Premium has no purchase flow** — see above, this is scaffolding only. Real
+  in-app purchases (via App Store/Play Store billing, likely through a library like
+  RevenueCat or `expo-in-app-purchases`) can only be wired up once the app is actually
+  distributed through those stores — see the EAS section below.
 - **Arabic font licensing risk**: the app now bundles the exact KFGQPC Uthmanic Hafs
   font from the user's reference photo, which is free for personal/non-commercial use
   only — see the note above. The user was offered a free, properly-licensed
@@ -454,12 +485,39 @@ Worth keeping in mind if something looks broken again:
 - Adhan sound toggle controls whether the local notification plays a sound at all —
   Expo Go / local notifications can't ship a custom Adhan audio file without an EAS
   build, so this is scoped honestly to sound on/off rather than a specific Adhan clip.
-- Account/profile is intentionally minimal (name, phone, city, gender, switch profile)
-  — no avatar upload yet, and no password-reset flow since there's no password at all.
+- Account/profile is intentionally minimal (name, city, gender, occupation, switch
+  profile) — no avatar upload yet, and no password-reset flow since there's no
+  password at all.
 - Push notifications are local-only; no server-side push (Expo Push/FCM/APNs) for
   things like admin broadcast messages (Notices are pulled on Home load instead).
-- No app store metadata/build profiles (EAS) set up yet — this is still a dev-mode app
-  run via Expo Go, not a standalone installable build — so a custom Adhan sound and
-  themed app icon per light/dark mode aren't possible until then either.
+- **Real Android/iOS app (EAS) — prepped, not yet buildable without your accounts.**
+  `mobile/eas.json` (build profiles: development/preview/production) and an
+  `ITSAppUsesNonExemptEncryption: false` entry in `app.json` (a standard, correct
+  default for an app with no custom encryption — avoids an App Store Connect prompt
+  every build) are in place. A public **privacy policy page** is live in the admin app
+  at `/privacy` (`admin/app/privacy/page.tsx`) — both app stores require a real privacy
+  policy URL to submit, and this is honest about exactly what the app collects (see the
+  page itself). **Still needed, and only you can do these — they need real accounts,
+  fees, and identity/payment verification I have no way to do on your behalf:**
+  1. An **Expo account** (free) — needed to run `eas login` and get a real EAS project
+     ID (app.json currently has no `extra.eas.projectId`; it's generated automatically
+     the first time you run `eas init` from the `mobile` folder with your account).
+  2. An **Apple Developer Program** membership ($99/year) — required to build/submit
+     for iOS and to actually offer in-app purchases (Noor Premium) there.
+  3. A **Google Play Console** account ($25 one-time) — required to build/submit for
+     Android and to offer in-app purchases there.
+  4. **Fill in the real support email** in `admin/app/privacy/page.tsx` — it currently
+     has a placeholder (`[add your support email here]`); both stores check that a
+     privacy policy has real contact info.
+  5. Once the admin app is deployed somewhere with a public URL (e.g. Vercel — it isn't
+     deployed anywhere yet, it's only been run locally), the `/privacy` URL becomes
+     real and can be used in both stores' submission forms.
+  6. **A real app icon.** The current icon/splash/adaptive-icon/favicon are all still
+     the original placeholder crescent mark — a real store listing needs a proper 1024×1024
+     icon (plus Android adaptive-icon layers). Happy to help design one (a logo /
+     app-icon design pass) whenever you're ready — just say so.
+  Once 1–3 are set up, running `eas build --platform ios` / `--platform android` from
+  the `mobile` folder (after `eas login`) produces real installable builds — I can walk
+  through that step by step when you're there.
 - Donation screen shows whatever the admin enters in the new Donation settings page;
   nothing is pre-filled — it starts empty until the admin adds real payment details.

@@ -94,7 +94,17 @@ function parseCsv(text: string): { rows: ParsedRow[]; errors: string[] } {
   return { rows, errors };
 }
 
-export default function JamatCalendarUpload({ masjidId, masjidName }: { masjidId: string; masjidName: string }) {
+export default function JamatCalendarUpload({
+  masjidId,
+  masjidName,
+  onChange,
+}: {
+  masjidId: string;
+  masjidName: string;
+  /** Called after a successful upload or clear, so the parent (the Masjids
+   *  list) can refresh its "today's row" preview for this masjid. */
+  onChange?: () => void;
+}) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dayCount, setDayCount] = useState<number | null>(null);
   const [loadingStatus, setLoadingStatus] = useState(true);
@@ -156,6 +166,7 @@ export default function JamatCalendarUpload({ masjidId, masjidName }: { masjidId
     setUploading(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
     loadStatus();
+    onChange?.();
   }
 
   async function handleClear() {
@@ -165,6 +176,7 @@ export default function JamatCalendarUpload({ masjidId, masjidName }: { masjidId
     setClearing(false);
     setResult(null);
     loadStatus();
+    onChange?.();
   }
 
   return (
