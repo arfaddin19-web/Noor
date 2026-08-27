@@ -69,8 +69,10 @@ export const HADITH_BOOKS: HadithBook[] = [
   {
     key: "bahishti",
     name: "Bahishti Zewar",
-    available: false,
-    unavailableNote:
-      "This is a fiqh manual, not a hadith collection, and no free structured digital source is available yet. Flagging this honestly rather than fabricating its content.",
+    available: true,
+    // Not a fetched hadith-API collection like the others above — this is a
+    // locally bundled, chapter-split translation (see lib/bahishtiZewar.ts).
+    // BooksHadithScreen routes this key to its own screen instead of the
+    // generic HadithBook reader.
   },
 ];

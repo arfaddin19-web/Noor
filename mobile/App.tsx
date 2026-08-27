@@ -19,6 +19,8 @@ import JuzDetailScreen from "./screens/JuzDetailScreen";
 import PageDetailScreen from "./screens/PageDetailScreen";
 import BooksHadithScreen from "./screens/BooksHadithScreen";
 import HadithBookScreen from "./screens/HadithBookScreen";
+import BahishtiZewarScreen from "./screens/BahishtiZewarScreen";
+import BahishtiZewarChapterScreen from "./screens/BahishtiZewarChapterScreen";
 import TasbihScreen from "./screens/TasbihScreen";
 import DuaScreen from "./screens/DuaScreen";
 import DonateScreen from "./screens/DonateScreen";
@@ -48,6 +50,8 @@ export type HomeStackParamList = {
   PageDetail: { number: number };
   BooksHadith: undefined;
   HadithBook: { key: string };
+  BahishtiZewar: undefined;
+  BahishtiZewarChapter: { id: number };
   Tasbih: undefined;
   Dua: undefined;
   Donate: undefined;
@@ -84,6 +88,16 @@ function HomeStackNavigator() {
         options={({ route }) => ({
           title: HADITH_BOOKS.find((b) => b.key === route.params.key)?.name ?? "Hadith",
         })}
+      />
+      <HomeStack.Screen
+        name="BahishtiZewar"
+        component={BahishtiZewarScreen}
+        options={{ title: "Bahishti Zewar" }}
+      />
+      <HomeStack.Screen
+        name="BahishtiZewarChapter"
+        component={BahishtiZewarChapterScreen}
+        options={{ title: "Bahishti Zewar" }}
       />
       <HomeStack.Screen name="Tasbih" component={TasbihScreen} options={{ title: "Tasbih" }} />
       <HomeStack.Screen name="Dua" component={DuaScreen} options={{ title: "Dua" }} />

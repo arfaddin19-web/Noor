@@ -131,11 +131,25 @@ up correctly in the mobile app.
     collections — **Sahih al-Bukhari, Sahih Muslim, Sunan Abu Dawud, Jami' at-Tirmidhi,
     Sunan an-Nasa'i, Sunan Ibn Majah** — each opens to its **full collection** (no more
     30-hadith cap), grouped by book/chapter number, with an **English/Urdu** toggle.
-    *Muntakhab Ahadith and Bahishti Zewar are listed but marked honestly unavailable* —
-    no free, verified digital source for either was found (Bahishti Zewar is a fiqh
-    manual, not a hadith collection, besides), so nothing was fabricated to fill them in.
-    Hindi/Nepali translations aren't published by any free hadith source we could find
-    either — Urdu is offered as the closest available alternate-language reading.
+    Hindi/Nepali translations aren't published by any free hadith source we could find —
+    Urdu is offered as the closest available alternate-language reading.
+    *Muntakhab Ahadith is still listed as unavailable* — no free, verified digital source
+    was found for it.
+  - **Bahishti Zewar (English)** is now a full entry in Books & Hadith — 93 chapters,
+    bundled locally (`lib/bahishtiZewar.ts`, `assets/bahishtiZewar/chapters.json`, ~2MB),
+    with a search box over chapter titles and a simple paragraph-by-paragraph reader
+    (`BahishtiZewarScreen`/`BahishtiZewarChapterScreen`). Extracted from the user-supplied
+    PDF (a scanned copy hosted on archive.org, Maulana Muhammad Mahomedy's translation) by
+    pulling its OCR text layer and splitting on the book's own bold section headings —
+    front matter and the table of contents were discarded, and each chapter's heading was
+    matched to its *second* occurrence in the file (the table of contents lists every
+    heading once near the start; the real chapter start is the next occurrence). *Honest
+    caveat*: this is OCR'd text from a scan, not a clean digital edition — occasional
+    word-order glitches from the original's two-column layout are possible, and a handful
+    of chapter titles have minor OCR artifacts (e.g. a stray apostrophe read as a space);
+    the content itself wasn't altered or re-translated. A Nepali/Hindi translation is a
+    separate, not-yet-started follow-on — see below for why that needs a scholar's review
+    first.
   - **Hadith of the Day** (new): a curated, offline list of 24 short, accurately-sourced
     hadith (mostly Bukhari/Muslim), picked deterministically by day-of-year. Shown as a
     card on Home, and — the actual point of it — an optional **daily notification** at
@@ -289,23 +303,20 @@ Worth keeping in mind if something looks broken again:
   alternative (Amiri Quran) and chose the exact match instead, accepting the risk.
   Getting a real commercial license from King Fahd Glorious Quran Printing Complex
   would remove it.
-- **Waiting on the user**: the full English PDFs of Muntakhab Ahadith and Bahishti
-  Zewar, to add as new Books & Hadith entries. Nepali/Hindi translations of that text
-  could be drafted using
-  Claude, but that's machine translation of religious/fiqh content — it should be
-  reviewed by a qualified Nepali/Hindi-speaking scholar before being shown to users as
-  authoritative, especially for Bahishti Zewar (a fiqh manual, where precision in
-  rulings matters a lot). Scope/timeline depends on the PDFs' length and formatting
-  once they arrive.
+- **Bahishti Zewar (English) is in; Nepali/Hindi translation is not started yet.**
+  Translating it could be drafted using Claude, but that's machine translation of
+  fiqh content — it should be reviewed by a qualified Nepali/Hindi-speaking scholar
+  before being shown to users as authoritative, since precision in rulings matters a
+  lot for this book specifically. Scope/timeline depends on how that review is
+  arranged.
+- **Waiting on the user**: the Muntakhab Ahadith English PDF, to add as a new Books &
+  Hadith entry the same way Bahishti Zewar was.
 - Ramadan Timetable / Islamic Calendar dates are computed from a standard tabular
   Hijri calendar, not moon sighting — every screen using them says so, but they should
   still be treated as estimates, not an authoritative Ramadan/Eid announcement.
 - Qur'an audio recitation ("Play"/"Auto-scroll") is not built — would need a reciter
   audio source wired up (AlQuran Cloud does offer per-ayah audio editions) plus an
   audio player; worth adding later if the user wants it, but not faked in the meantime.
-- Muntakhab Ahadith and Bahishti Zewar are listed in Books & Hadith as honestly
-  unavailable — no free, verified digital source found for either. If the user has a
-  licensed text source for them, it can be wired in.
 - No Hindi or Nepali hadith translations exist in any free source we could find; Urdu
   is offered instead. Worth revisiting if a Hindi/Nepali source turns up.
 - Halal food doesn't have the same city search bar Masjids just got — worth adding for

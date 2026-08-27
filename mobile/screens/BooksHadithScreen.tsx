@@ -35,11 +35,15 @@ export default function BooksHadithScreen() {
           <View style={[styles.card, theme.cardShadow]}>
             <TouchableOpacity
               style={styles.row}
-              onPress={() =>
-                item.available
-                  ? navigation.navigate("HadithBook", { key: item.key })
-                  : setExpanded((prev) => ({ ...prev, [item.key]: !prev[item.key] }))
-              }
+              onPress={() => {
+                if (item.key === "bahishti") {
+                  navigation.navigate("BahishtiZewar");
+                } else if (item.available) {
+                  navigation.navigate("HadithBook", { key: item.key });
+                } else {
+                  setExpanded((prev) => ({ ...prev, [item.key]: !prev[item.key] }));
+                }
+              }}
             >
               <View style={styles.rowIconWrap}>
                 <Ionicons
