@@ -1,24 +1,23 @@
 import React, { useMemo } from "react";
 import { StyleSheet, Text } from "react-native";
-import { toArabicIndicDigits } from "../lib/arabicNumerals";
 import { useTheme } from "../lib/ThemeContext";
 import { ARABIC_FONT_REGULAR } from "../theme";
 import type { Theme } from "../theme";
 
 export interface MushafAyah {
-  number: number; // ayah number within its surah
+  number: number; // ayah number within its surah — unused for rendering (see below), kept for callers/keys
   text: string;
 }
 
 /** Renders a block of ayahs as continuous, right-to-left flowing Mushaf-style
- *  text — one wrapped paragraph, not a list of separate boxed cards — with a
- *  small inline marker after each ayah (in Arabic-Indic numerals), the way a
- *  printed Qur'an reads. The marker is just the bare digits in the same font
- *  as the body text — UthmanicHafs has a built-in ligature that automatically
- *  draws the traditional ornamental circle around Arabic-Indic digits (single
- *  or multi-digit alike), so no manual bracket characters or separate marker
- *  font are needed; using a different font here is what broke that ligature
- *  before. */
+ *  text — one wrapped paragraph, not a list of separate boxed cards — the way
+ *  a printed Qur'an reads. `ayah.text` (from lib/quranText.ts's bundled QPC
+ *  data) already ends with its own Arabic-Indic ayah-number digit — that's
+ *  the actual source text, not something added here — and UthmanicHafs has a
+ *  built-in ligature that automatically draws the traditional ornamental
+ *  circle around it. This used to *also* append `ayah.number` as a second
+ *  marker on top of that embedded one, which doubled every ayah number on
+ *  screen; fixed by just rendering the text as-is. */
 export default function MushafText({
   ayahs,
   fontSize,
@@ -34,9 +33,7 @@ export default function MushafText({
   return (
     <Text style={[styles.block, { fontSize, lineHeight }]}>
       {ayahs.map((ayah, i) => (
-        <Text key={i}>
-          {ayah.text} {toArabicIndicDigits(ayah.number)}{" "}
-        </Text>
+        <Text key={i}>{ayah.text} </Text>
       ))}
     </Text>
   );

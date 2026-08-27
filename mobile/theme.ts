@@ -145,6 +145,13 @@ const lightShadow = {
 // circle around them — Dua/Kalima text, Ayah of the Day).
 export const ARABIC_FONT_REGULAR = "UthmanicHafs-Regular";
 
+// Noto Nastaliq Urdu — the standard, widely-legible Nastaliq typeface for
+// Urdu (OFL-licensed, used by outlets like BBC Urdu), used for Urdu hadith
+// text in Books & Hadith instead of the system default font, which is hard
+// to read for Urdu's Nastaliq script. Loaded via expo-font in App.tsx
+// (assets/fonts/NotoNastaliqUrdu-Regular.ttf).
+export const URDU_FONT = "NotoNastaliqUrdu-Regular";
+
 export function getTheme(mode: "light" | "dark"): Theme {
   return {
     mode,

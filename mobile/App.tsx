@@ -76,7 +76,20 @@ function HomeStackNavigator() {
   return (
     <HomeStack.Navigator screenOptions={headerOptions(theme)}>
       <HomeStack.Screen name="HomeMain" component={HomeScreen} options={{ headerShown: false }} />
-      <HomeStack.Screen name="Qibla" component={QiblaScreen} options={{ title: "Qibla Direction" }} />
+      <HomeStack.Screen
+        name="Qibla"
+        component={QiblaScreen}
+        options={{
+          title: "Qibla Direction",
+          // Always-black header to match the compass's iPhone-style black
+          // dial below it, rather than the app's usual emerald gradient
+          // header clashing with it.
+          headerStyle: { backgroundColor: "#000" },
+          headerBackground: undefined,
+          headerTintColor: "white",
+          headerTitleStyle: { color: "white", fontWeight: "700" },
+        }}
+      />
       <HomeStack.Screen name="QuranList" component={QuranScreen} options={{ title: "Qur'an" }} />
       <HomeStack.Screen name="SurahDetail" component={SurahDetailScreen} options={{ headerShown: false }} />
       <HomeStack.Screen name="JuzDetail" component={JuzDetailScreen} options={{ headerShown: false }} />
@@ -208,6 +221,7 @@ function AppInner() {
   const [initialRoute, setInitialRoute] = useState<keyof RootStackParamList>("Main");
   const [fontsLoaded] = useFonts({
     "UthmanicHafs-Regular": require("./assets/fonts/UthmanicHafs-Regular.otf"),
+    "NotoNastaliqUrdu-Regular": require("./assets/fonts/NotoNastaliqUrdu-Regular.ttf"),
   });
 
   useEffect(() => {

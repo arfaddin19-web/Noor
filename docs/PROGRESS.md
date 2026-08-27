@@ -84,9 +84,15 @@ up correctly in the mobile app.
     earlier raw-magnetometer `atan2()` math, which was unreliable and could point the
     needle backwards on some devices. A fixed triangular pointer now sits at the top of
     the ring (doesn't rotate), the same convention as a real compass: the dial turns
-    underneath it, and alignment means the 🕋 needle meets that fixed pointer. 300px
-    ring, 10° tick marks, gold N/NE/E/SE/S/SW/W/NW labels. (Intentionally skipped: a
-    live map thumbnail and compass-skin picker — decorative/heavy, not core functionality.)
+    underneath it. Redesigned to match the iPhone Compass app's look — solid black dial,
+    thin white tick marks (5° apart, longer at 30° and at the cardinals), big white N/E/S/W
+    letters plus plain degree numbers at the other 30° marks, a large heading readout above
+    the dial, and a black header bar (instead of the app's usual emerald gradient, which
+    clashed with it). A small drawn Kaaba icon (not the 🕋 emoji, which renders
+    inconsistently across devices/fonts) sits directly on the dial at the Qibla bearing —
+    in place of whatever plain tick would otherwise be there — with the needle pointing at
+    it; alignment means that icon meets the fixed top pointer. (Intentionally skipped: a
+    live map thumbnail — decorative/heavy, not core functionality.)
   - **Qur'an list**: "Last Read" hero card (jumps back into whichever Surah/Juz/Page you
     last opened), a **Bookmarks** row (long-press a chip to remove it), a Sura/Page/Juz
     underline-tab toggle, 8-point star badges on Surah/Juz rows, and a 604-tile Page grid.
@@ -103,12 +109,12 @@ up correctly in the mobile app.
     optional, off-by-default translation block).
   - **Qur'an reader** (Surah/Juz/Page detail): rebuilt as continuous, right-to-left
     flowing **Mushaf-style** text (`components/MushafText.tsx`) — one wrapped paragraph
-    per surah segment with an inline Arabic-Indic ayah-number marker, not boxed per-ayah
-    cards. The marker is just bare digits in the *same* Uthmanic Hafs font as the body
-    text — that font has a built-in ligature that automatically draws the traditional
-    ornamental circle around single- *and* multi-digit ayah numbers, matching a real
-    printed Mushaf; using a different font for the marker (as an earlier version did) is
-    what broke that ligature. A custom top bar (`QuranReaderTopBar`) replaces the native header:
+    per surah segment. Each verse's ayah-number marker (the ornamental circle around the
+    number) comes from the bundled QPC text itself, which already ends every verse with
+    its own Arabic-Indic digit rendered via the font's ligature — an earlier version of
+    this component *also* appended its own copy of the number on top of that, which
+    doubled every ayah number on screen; fixed by rendering the verse text as-is. A custom
+    top bar (`QuranReaderTopBar`) replaces the native header:
     back chevron, a context pill (Surah/Juz/Page number), a Home shortcut, and the
     surah-name pill. A bottom toolbar (`QuranReaderToolbar`) has real, working buttons:
     **Bookmark** (saves/removes this Surah/Juz/Page, shown in the list screen's
@@ -130,7 +136,12 @@ up correctly in the mobile app.
   - **Books & Hadith** (renamed from "Hadith"): a collapsed-by-default list of
     collections — **Sahih al-Bukhari, Sahih Muslim, Sunan Abu Dawud, Jami' at-Tirmidhi,
     Sunan an-Nasa'i, Sunan Ibn Majah** — each opens to its **full collection** (no more
-    30-hadith cap), grouped by book/chapter number, with an **English/Urdu** toggle.
+    30-hadith cap), grouped by book/chapter number, with an **English/Urdu** toggle. A
+    small number of entries in the source collection have no text for a given language
+    (chapter-boundary placeholders) — those are filtered out now instead of showing as a
+    blank card. Urdu text renders in **Noto Nastaliq Urdu** (OFL-licensed, the standard
+    Nastaliq typeface used by outlets like BBC Urdu) instead of the system default font,
+    which was hard to read for Urdu's script.
     Hindi/Nepali translations aren't published by any free hadith source we could find —
     Urdu is offered as the closest available alternate-language reading.
     *Muntakhab Ahadith is still listed as unavailable* — no free, verified digital source
@@ -143,13 +154,20 @@ up correctly in the mobile app.
     pulling its OCR text layer and splitting on the book's own bold section headings —
     front matter and the table of contents were discarded, and each chapter's heading was
     matched to its *second* occurrence in the file (the table of contents lists every
-    heading once near the start; the real chapter start is the next occurrence). *Honest
-    caveat*: this is OCR'd text from a scan, not a clean digital edition — occasional
-    word-order glitches from the original's two-column layout are possible, and a handful
-    of chapter titles have minor OCR artifacts (e.g. a stray apostrophe read as a space);
-    the content itself wasn't altered or re-translated. A Nepali/Hindi translation is a
-    separate, not-yet-started follow-on — see below for why that needs a scholar's review
-    first.
+    heading once near the start; the real chapter start is the next occurrence). Paragraph
+    breaks were rebuilt from scratch after the first version shipped with chaotic spacing —
+    the source's blank lines turned out to carry almost no real paragraph signal (verified:
+    only one double-blank-line in the whole ~82,000-line extracted text), so treating them
+    as paragraph breaks fragmented numbered masa'il lists into tiny one-word paragraphs,
+    each getting a full paragraph gap in the reader. Fixed by ignoring blank lines entirely
+    and instead inserting a paragraph break at each numbered list marker ("1. ", "2. " …) —
+    this book's own consistent way of marking a ruling — with plain prose sections grouped
+    into readable ~2-4 sentence paragraphs instead. *Honest caveat*: this is OCR'd text from
+    a scan, not a clean digital edition — occasional word-order glitches from the original's
+    two-column layout are possible, and a handful of chapter titles have minor OCR artifacts
+    (e.g. a stray apostrophe read as a space); the content itself wasn't altered or
+    re-translated. A Nepali/Hindi translation is a separate, not-yet-started follow-on —
+    see below for why that needs a scholar's review first.
   - **Hadith of the Day** (new): a curated, offline list of 24 short, accurately-sourced
     hadith (mostly Bukhari/Muslim), picked deterministically by day-of-year. Shown as a
     card on Home, and — the actual point of it — an optional **daily notification** at
@@ -163,17 +181,21 @@ up correctly in the mobile app.
     details the admin has filled in (`app_settings.donation_info`); values are
     press-and-hold to copy. Hides rows the admin left blank.
   - **Islamic Calendar** (new): a real month-view **calendar grid**
-    (`components/CalendarGrid.tsx`) sits at the top — Gregorian dates with the Hijri
-    day-of-month underneath each, today highlighted, a dot on any date with an Islamic
-    event, and ‹ › month navigation — above two tabs. **Events** lists Islamic New Year,
-    Ashura, Mawlid, Isra & Mi'raj, start of Ramadan, Laylatul Qadr, Eid al-Fitr, start of
-    Dhu al-Hijjah, Day of Arafah, and Eid al-Adha for the current Hijri year, each with
-    an "in N days" badge, computed entirely offline. **Ramadan** shows a real
-    Sehri-ends / Iftar table for every day of the current or next Ramadan, sourced from
-    the actual `prayer_times` data (Fajr/Maghrib) rather than separate content. Both
-    the grid and the tabs carry a visible caveat that these are tabular-calendar
-    estimates — actual Ramadan/Eid dates depend on local moon sighting and can shift by
-    a day.
+    (`components/CalendarGrid.tsx`) sits at the top — the **Hijri day-of-month is the
+    big, primary number** in each cell (this is an Islamic calendar first), with the
+    Gregorian date shown smaller underneath it (the reverse of a typical Gregorian-first
+    calendar), today highlighted, a dot on any date with an Islamic event, and ‹ › month
+    navigation — above two tabs. **Events** lists Islamic New Year, Ashura, Mawlid, Isra
+    & Mi'raj, start of Ramadan, Laylatul Qadr, Eid al-Fitr, start of Dhu al-Hijjah, Day of
+    Arafah, and Eid al-Adha for the current Hijri year, each with an "in N days" badge,
+    computed entirely offline. **Ramadan** shows a real Sehri-ends / Iftar table for every
+    day of the current or next Ramadan, sourced from the actual `prayer_times` data
+    (Fajr/Maghrib) rather than separate content. The whole screen — grid included —
+    scrolls together as one page now; it used to pin the grid at a fixed height and give
+    the Events/Ramadan list whatever space was left over, which on some screens was only
+    enough to show one line at a time. Both the grid and the tabs carry a visible caveat
+    that these are tabular-calendar estimates — actual Ramadan/Eid dates depend on local
+    moon sighting and can shift by a day.
   - **Community Help** (new, the user's "Volunteers" idea, renamed): a directory of
     masjid-affiliated social-work organizations — name, city, contact person,
     designation, phone — with a city search bar, for someone new to a city or in

@@ -95,67 +95,67 @@ export default function IslamicCalendarScreen() {
 
   return (
     <ScreenBackground>
-      <CalendarGrid />
+      {/* Everything — the calendar grid included — scrolls together as one
+          page, rather than pinning the grid and leaving the Events/Ramadan
+          list squeezed into whatever little space was left over (which made
+          it show barely one line at a time with no way to scroll it). */}
+      <ScrollView contentContainerStyle={styles.pageScroll}>
+        <CalendarGrid />
 
-      <View style={styles.headerCard}>
-        <Text style={styles.headerCaveat}>
-          Dates use a standard tabular calendar and are estimates — your local masjid's
-          moon-sighting announcement may shift Ramadan, Eid, or other dates by a day.
-        </Text>
-      </View>
+        <View style={styles.headerCard}>
+          <Text style={styles.headerCaveat}>
+            Dates use a standard tabular calendar and are estimates — your local masjid's
+            moon-sighting announcement may shift Ramadan, Eid, or other dates by a day.
+          </Text>
+        </View>
 
-      <View style={styles.tabRow}>
-        {(["events", "ramadan"] as Tab[]).map((t) => (
-          <TouchableOpacity key={t} style={styles.tab} onPress={() => setTab(t)}>
-            <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>
-              {t === "events" ? "Events" : "Ramadan"}
-            </Text>
-            {tab === t && <View style={styles.tabUnderline} />}
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {tab === "events" && (
-        <ScrollView contentContainerStyle={styles.listContent}>
-          {events.map((e) => (
-            <EventRow key={e.title} event={e} now={now} theme={theme} styles={styles} />
-          ))}
-        </ScrollView>
-      )}
-
-      {tab === "ramadan" && (
-        <ScrollView contentContainerStyle={styles.listContent}>
-          {loadingRamadan ? (
-            <ActivityIndicator color={theme.colors.accent} style={{ marginTop: 40 }} />
-          ) : error ? (
-            <Text style={styles.muted}>{error}</Text>
-          ) : (
-            <>
-              <Text style={styles.ramadanSubtitle}>
-                Ramadan {ramadanYear} AH{ramadanDays.length > 0 ? ` — ${formatDate(ramadanDays[0].date)} to ${formatDate(ramadanDays[ramadanDays.length - 1].date)}` : ""}
+        <View style={styles.tabRow}>
+          {(["events", "ramadan"] as Tab[]).map((t) => (
+            <TouchableOpacity key={t} style={styles.tab} onPress={() => setTab(t)}>
+              <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>
+                {t === "events" ? "Events" : "Ramadan"}
               </Text>
-              {ramadanDays.map((d) => (
-                <View key={d.index} style={[styles.ramadanRow, theme.cardShadow]}>
-                  <View style={styles.ramadanDayBadge}>
-                    <Text style={styles.ramadanDayText}>{d.index}</Text>
+              {tab === t && <View style={styles.tabUnderline} />}
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <View style={styles.listContent}>
+          {tab === "events" &&
+            events.map((e) => <EventRow key={e.title} event={e} now={now} theme={theme} styles={styles} />)}
+
+          {tab === "ramadan" &&
+            (loadingRamadan ? (
+              <ActivityIndicator color={theme.colors.accent} style={{ marginTop: 40 }} />
+            ) : error ? (
+              <Text style={styles.muted}>{error}</Text>
+            ) : (
+              <>
+                <Text style={styles.ramadanSubtitle}>
+                  Ramadan {ramadanYear} AH{ramadanDays.length > 0 ? ` — ${formatDate(ramadanDays[0].date)} to ${formatDate(ramadanDays[ramadanDays.length - 1].date)}` : ""}
+                </Text>
+                {ramadanDays.map((d) => (
+                  <View key={d.index} style={[styles.ramadanRow, theme.cardShadow]}>
+                    <View style={styles.ramadanDayBadge}>
+                      <Text style={styles.ramadanDayText}>{d.index}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.ramadanDate}>{formatDate(d.date)}</Text>
+                    </View>
+                    <View style={styles.ramadanTimeCol}>
+                      <Text style={styles.ramadanTimeLabel}>Sehri ends</Text>
+                      <Text style={styles.ramadanTimeValue}>{d.sehriEnds ?? "—"}</Text>
+                    </View>
+                    <View style={styles.ramadanTimeCol}>
+                      <Text style={styles.ramadanTimeLabel}>Iftar</Text>
+                      <Text style={styles.ramadanTimeValue}>{d.iftar ?? "—"}</Text>
+                    </View>
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.ramadanDate}>{formatDate(d.date)}</Text>
-                  </View>
-                  <View style={styles.ramadanTimeCol}>
-                    <Text style={styles.ramadanTimeLabel}>Sehri ends</Text>
-                    <Text style={styles.ramadanTimeValue}>{d.sehriEnds ?? "—"}</Text>
-                  </View>
-                  <View style={styles.ramadanTimeCol}>
-                    <Text style={styles.ramadanTimeLabel}>Iftar</Text>
-                    <Text style={styles.ramadanTimeValue}>{d.iftar ?? "—"}</Text>
-                  </View>
-                </View>
-              ))}
-            </>
-          )}
-        </ScrollView>
-      )}
+                ))}
+              </>
+            ))}
+        </View>
+      </ScrollView>
     </ScreenBackground>
   );
 }
@@ -200,6 +200,7 @@ function EventRow({
 
 function makeStyles(theme: Theme) {
   return StyleSheet.create({
+    pageScroll: { paddingBottom: 32 },
     headerCard: {
       backgroundColor: theme.colors.cardBg,
       margin: theme.spacing.md,

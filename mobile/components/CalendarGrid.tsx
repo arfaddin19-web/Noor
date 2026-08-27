@@ -111,11 +111,11 @@ export default function CalendarGrid() {
           <View key={i} style={styles.cell}>
             {cell.date && (
               <View style={[styles.cellInner, cell.isToday && styles.cellInnerToday]}>
-                <Text style={[styles.dayText, cell.isToday && styles.dayTextToday]}>
-                  {cell.date.getDate()}
-                </Text>
                 <Text style={[styles.hijriText, cell.isToday && styles.hijriTextToday]}>
                   {cell.hijriDay}
+                </Text>
+                <Text style={[styles.dayText, cell.isToday && styles.dayTextToday]}>
+                  {cell.date.getDate()}
                 </Text>
                 {cell.hasEvent && <View style={[styles.eventDot, cell.isToday && styles.eventDotToday]} />}
               </View>
@@ -159,10 +159,13 @@ function makeStyles(theme: Theme) {
     cell: { width: `${100 / 7}%`, aspectRatio: 1, alignItems: "center", justifyContent: "center" },
     cellInner: { alignItems: "center", justifyContent: "center", width: 34, height: 34, borderRadius: 17 },
     cellInnerToday: { backgroundColor: theme.colors.accent },
-    dayText: { fontSize: 13, fontWeight: "700", color: theme.colors.textPrimary },
-    dayTextToday: { color: "white" },
-    hijriText: { fontSize: 9, color: theme.colors.textMuted, marginTop: -1 },
-    hijriTextToday: { color: "rgba(255,255,255,0.85)" },
+    // The Hijri day is the primary (bigger, bolder) number — this is an
+    // Islamic calendar first — with the Gregorian day shown smaller beneath
+    // it, the reverse of a typical Gregorian-first calendar.
+    hijriText: { fontSize: 13, fontWeight: "700", color: theme.colors.textPrimary },
+    hijriTextToday: { color: "white" },
+    dayText: { fontSize: 9, color: theme.colors.textMuted, marginTop: -1 },
+    dayTextToday: { color: "rgba(255,255,255,0.85)" },
     eventDot: {
       position: "absolute",
       bottom: 1,

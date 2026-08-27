@@ -10,21 +10,28 @@ const KAABA_LNG = 39.8262;
 
 const RING_SIZE = 300;
 const TICK_RADIUS = 138;
-const LABEL_RADIUS = 112;
+const LABEL_RADIUS = 110;
+const KAABA_RADIUS = 128;
 const ALIGN_TOLERANCE_DEG = 6;
 
-const DIRECTIONS = [
-  { bearing: 0, label: "N", major: true },
-  { bearing: 45, label: "NE", major: false },
-  { bearing: 90, label: "E", major: true },
-  { bearing: 135, label: "SE", major: false },
-  { bearing: 180, label: "S", major: true },
-  { bearing: 225, label: "SW", major: false },
-  { bearing: 270, label: "W", major: true },
-  { bearing: 315, label: "NW", major: false },
+// Apple Compass-style dial: big cardinal letters at N/E/S/W, plain degree
+// numbers at the other 30°-interval marks.
+const DIAL_MARKS = [
+  { bearing: 0, label: "N", cardinal: true },
+  { bearing: 30, label: "30", cardinal: false },
+  { bearing: 60, label: "60", cardinal: false },
+  { bearing: 90, label: "E", cardinal: true },
+  { bearing: 120, label: "120", cardinal: false },
+  { bearing: 150, label: "150", cardinal: false },
+  { bearing: 180, label: "S", cardinal: true },
+  { bearing: 210, label: "210", cardinal: false },
+  { bearing: 240, label: "240", cardinal: false },
+  { bearing: 270, label: "W", cardinal: true },
+  { bearing: 300, label: "300", cardinal: false },
+  { bearing: 330, label: "330", cardinal: false },
 ];
 
-const TICKS = Array.from({ length: 36 }, (_, i) => i * 10);
+const TICKS = Array.from({ length: 72 }, (_, i) => i * 5);
 
 function toRad(deg: number) {
   return (deg * Math.PI) / 180;
@@ -102,19 +109,22 @@ function CompassMark({
   );
 }
 
-/** The Qibla needle — a full-diameter bar that rotates (within the dial) to point at
- *  `bearing`: a red half toward the Kaaba, a muted tail on the opposite side. */
-function Needle({ bearing, styles }: { bearing: number; styles: ReturnType<typeof makeStyles> }) {
+/** A small drawn Kaaba icon — a black cube with the gold-embroidered band
+ *  (kiswah) near the top — instead of the 🕋 emoji, which renders
+ *  inconsistently across devices/fonts, same reasoning as the rest of the
+ *  app's move to drawn/vector icons over emoji. */
+function KaabaIcon({ size = 16 }: { size?: number }) {
   return (
-    <View style={[StyleSheet.absoluteFill, { transform: [{ rotate: `${bearing}deg` }] }]}>
-      <View style={styles.needleTop} />
-      <View style={styles.needleBottom} />
-      <View style={styles.needleTip}>
-        <Text style={styles.needleTipIcon}>🕋</Text>
-      </View>
+    <View style={[kaabaStyles.cube, { width: size, height: size, borderRadius: size * 0.15 }]}>
+      <View style={[kaabaStyles.band, { top: size * 0.32, height: size * 0.16 }]} />
     </View>
   );
 }
+
+const kaabaStyles = StyleSheet.create({
+  cube: { backgroundColor: "#0e0e0e", borderWidth: 1, borderColor: "#2a2a2a", overflow: "hidden" },
+  band: { position: "absolute", left: 0, right: 0, backgroundColor: "#c9a227" },
+});
 
 export default function QiblaScreen() {
   const theme = useTheme();
@@ -180,10 +190,10 @@ export default function QiblaScreen() {
 
   return (
     <View style={styles.page}>
-      <View style={styles.headerRow}>
-        <Text style={styles.headerText}>Qibla: {Math.round(qiblaBearing)}°</Text>
-        <Text style={styles.headerText}>Current: {Math.round(heading)}°</Text>
-      </View>
+      <Text style={[styles.headingReadout, isAligned && styles.headingReadoutAligned]}>
+        {Math.round(heading)}°
+      </Text>
+      <Text style={styles.qiblaSubtext}>Qibla is at {Math.round(qiblaBearing)}°</Text>
 
       <View style={styles.compassWrap}>
         {/* Fixed pointer — always at the top, doesn't rotate. Represents the top
@@ -196,58 +206,68 @@ export default function QiblaScreen() {
 
         <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ rotate: dialSpin }] }]}>
           {TICKS.map((deg) => {
-            const isMajorAxis = deg % 90 === 0;
-            const isDiagonal = deg % 45 === 0 && !isMajorAxis;
+            const isCardinal = deg % 90 === 0;
+            const isThirty = deg % 30 === 0 && !isCardinal;
             return (
               <CompassMark key={deg} bearing={deg} radius={TICK_RADIUS}>
                 <View
                   style={[
                     styles.tick,
-                    isMajorAxis && styles.tickMajor,
-                    isDiagonal && styles.tickMinorLong,
+                    isThirty && styles.tickThirty,
+                    isCardinal && styles.tickCardinal,
                   ]}
                 />
               </CompassMark>
             );
           })}
-          {DIRECTIONS.map((d) => (
-            <CompassMark key={d.label} bearing={d.bearing} radius={LABEL_RADIUS}>
-              <Text style={d.major ? styles.dirLabelMajor : styles.dirLabel}>{d.label}</Text>
+          {DIAL_MARKS.map((m) => (
+            <CompassMark key={m.label} bearing={m.bearing} radius={LABEL_RADIUS}>
+              <Text style={m.cardinal ? styles.dirLabelCardinal : styles.dirLabel}>{m.label}</Text>
             </CompassMark>
           ))}
 
-          <Needle bearing={qiblaBearing} styles={styles} />
+          {/* Small Kaaba icon marking the Qibla bearing directly on the dial
+              (in place of whatever plain degree tick would otherwise sit
+              there), plus the needle pointing at the same bearing. */}
+          <CompassMark bearing={qiblaBearing} radius={KAABA_RADIUS}>
+            <View style={styles.kaabaBadge}>
+              <KaabaIcon size={15} />
+            </View>
+          </CompassMark>
+
+          <View style={[StyleSheet.absoluteFill, { transform: [{ rotate: `${qiblaBearing}deg` }] }]}>
+            <View style={styles.needleTop} />
+            <View style={styles.needleBottom} />
+          </View>
         </Animated.View>
 
         <View style={[styles.centerHub, isAligned && styles.centerHubAligned]} />
       </View>
 
-      <Text style={[styles.statusText, isAligned && styles.statusTextAligned]}>
-        {isAligned ? "You're facing Kaaba now" : "Turn until the 🕋 lines up with the pointer at the top"}
-      </Text>
+      <View style={styles.statusRow}>
+        <KaabaIcon size={16} />
+        <Text style={[styles.statusText, isAligned && styles.statusTextAligned]}>
+          {isAligned ? "You're facing the Kaaba now" : "Turn until the Kaaba icon lines up with the pointer at the top"}
+        </Text>
+      </View>
     </View>
   );
 }
 
 function makeStyles(theme: Theme) {
   return StyleSheet.create({
-  page: { flex: 1, backgroundColor: theme.colors.pageBg, alignItems: "center", paddingTop: 24 },
+  page: { flex: 1, backgroundColor: "#000", alignItems: "center", paddingTop: 24 },
   center: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     padding: 24,
-    backgroundColor: theme.colors.pageBg,
+    backgroundColor: "#000",
   },
-  muted: { color: theme.colors.textMuted, textAlign: "center" },
-  headerRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    width: "100%",
-    paddingHorizontal: 28,
-    marginBottom: 20,
-  },
-  headerText: { fontSize: 13, fontWeight: "700", color: theme.colors.textMuted },
+  muted: { color: "#9a9a9a", textAlign: "center" },
+  headingReadout: { fontSize: 56, fontWeight: "300", color: "white", letterSpacing: 1 },
+  headingReadoutAligned: { color: "#3ecf6a" },
+  qiblaSubtext: { fontSize: 13, color: "#9a9a9a", marginTop: 2, marginBottom: 20, fontWeight: "600" },
   compassWrap: {
     width: RING_SIZE,
     height: RING_SIZE,
@@ -256,85 +276,75 @@ function makeStyles(theme: Theme) {
   },
   fixedPointer: {
     position: "absolute",
-    top: -10,
+    top: -6,
     width: 0,
     height: 0,
-    borderLeftWidth: 9,
-    borderRightWidth: 9,
-    borderTopWidth: 14,
+    borderLeftWidth: 8,
+    borderRightWidth: 8,
+    borderTopWidth: 16,
     borderLeftColor: "transparent",
     borderRightColor: "transparent",
-    borderTopColor: theme.colors.textMuted,
+    borderTopColor: "#e0342a",
     zIndex: 2,
   },
-  fixedPointerAligned: { borderTopColor: theme.colors.accent },
+  fixedPointerAligned: { borderTopColor: "#3ecf6a" },
   compassRing: {
-    ...theme.cardShadow,
     position: "absolute",
     width: RING_SIZE,
     height: RING_SIZE,
     borderRadius: RING_SIZE / 2,
-    borderWidth: 10,
-    borderColor: "#f3ecdd",
-    backgroundColor: theme.colors.cardBg,
+    borderWidth: 1,
+    borderColor: "#2c2c2c",
+    backgroundColor: "#111",
   },
-  tick: { width: 2, height: 8, backgroundColor: "#d8c9a3" },
-  tickMinorLong: { height: 12, backgroundColor: theme.colors.gold },
-  tickMajor: { width: 3, height: 16, backgroundColor: theme.colors.accent },
-  dirLabel: { fontSize: 12, fontWeight: "700", color: theme.colors.gold },
-  dirLabelMajor: { fontSize: 15, fontWeight: "800", color: theme.colors.accent },
+  tick: { width: 1, height: 6, backgroundColor: "#565656" },
+  tickThirty: { width: 1.5, height: 10, backgroundColor: "#a8a8a8" },
+  tickCardinal: { width: 2, height: 14, backgroundColor: "white" },
+  dirLabel: { fontSize: 12, fontWeight: "600", color: "#c9c9c9" },
+  dirLabelCardinal: { fontSize: 17, fontWeight: "700", color: "white" },
+  kaabaBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#2a2a2a",
+    borderWidth: 1.5,
+    borderColor: "#c9a227",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   needleTop: {
     position: "absolute",
-    top: 22,
-    left: RING_SIZE / 2 - 4,
-    width: 8,
-    height: RING_SIZE / 2 - 22,
-    backgroundColor: "#d64545",
-    borderTopLeftRadius: 4,
-    borderTopRightRadius: 4,
+    top: 30,
+    left: RING_SIZE / 2 - 1,
+    width: 2,
+    height: RING_SIZE / 2 - 52,
+    backgroundColor: "#e0342a",
   },
   needleBottom: {
     position: "absolute",
     bottom: 22,
-    left: RING_SIZE / 2 - 4,
-    width: 8,
+    left: RING_SIZE / 2 - 1,
+    width: 2,
     height: RING_SIZE / 2 - 22,
-    backgroundColor: "#94a3b8",
-    borderBottomLeftRadius: 4,
-    borderBottomRightRadius: 4,
+    backgroundColor: "#4a4a4a",
   },
-  needleTip: {
-    position: "absolute",
-    top: -4,
-    left: RING_SIZE / 2 - 18,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: theme.colors.cardBg,
-    borderWidth: 2,
-    borderColor: "#d64545",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  needleTipIcon: { fontSize: 18 },
   centerHub: {
     position: "absolute",
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: theme.colors.textPrimary,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: "white",
     borderWidth: 3,
-    borderColor: theme.colors.cardBg,
+    borderColor: "#111",
   },
-  centerHubAligned: { backgroundColor: theme.colors.accent },
+  centerHubAligned: { backgroundColor: "#3ecf6a" },
+  statusRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 24, paddingHorizontal: 24 },
   statusText: {
-    marginTop: 28,
-    fontSize: 16,
-    fontWeight: "700",
-    color: theme.colors.textMuted,
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#c9c9c9",
     textAlign: "center",
-    paddingHorizontal: 24,
   },
-  statusTextAligned: { color: theme.colors.accent },
+  statusTextAligned: { color: "#3ecf6a" },
   });
 }

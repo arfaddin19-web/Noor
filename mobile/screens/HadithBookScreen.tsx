@@ -6,6 +6,7 @@ import type { HomeStackParamList } from "../App";
 import ScreenBackground from "../components/ScreenBackground";
 import { HADITH_BOOKS } from "../lib/hadithBooks";
 import { useTheme } from "../lib/ThemeContext";
+import { URDU_FONT } from "../theme";
 import type { Theme } from "../theme";
 
 // Free, no-key hadith API: https://github.com/fawazahmed0/hadith-api
@@ -40,7 +41,13 @@ export default function HadithBookScreen() {
     setError(null);
     fetch(`${BASE}/${slug}.json`)
       .then((r) => r.json())
-      .then((json) => setHadiths(json.hadiths ?? []))
+      .then((json) => {
+        // The source collection has a handful of entries with no text (e.g.
+        // chapter-boundary placeholders) — skip those rather than showing a
+        // blank card.
+        const all: RawHadith[] = json.hadiths ?? [];
+        setHadiths(all.filter((h) => h.text && h.text.trim().length > 0));
+      })
       .catch(() => setError("Couldn't load this collection. Check your connection."))
       .finally(() => setLoading(false));
   }, [lang, book]);
@@ -163,6 +170,14 @@ function makeStyles(theme: Theme) {
     },
     numberText: { fontSize: 11, color: theme.colors.accent, fontWeight: "700" },
     text: { fontSize: 14, color: theme.colors.textMuted, lineHeight: 21 },
-    textRtl: { textAlign: "right", writingDirection: "rtl" },
+    // Nastaliq scripts read better a size up from Latin text, and need more
+    // line-height to fit the script's vertical strokes/loops.
+    textRtl: {
+      textAlign: "right",
+      writingDirection: "rtl",
+      fontFamily: URDU_FONT,
+      fontSize: 18,
+      lineHeight: 34,
+    },
   });
 }
