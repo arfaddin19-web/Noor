@@ -15,7 +15,8 @@ import type { HomeStackParamList } from "../App";
 import { supabase } from "../lib/supabase";
 import { Masjid, PrayerTime } from "../lib/types";
 import { todayMonthDay } from "../lib/prayerLogic";
-import { getTodayJamat, TodayJamat } from "../lib/masjidJamat";
+import { getJamatForDate, TodayJamat } from "../lib/masjidJamat";
+import { formatTime12h } from "../lib/timeFormat";
 import { useTheme } from "../lib/ThemeContext";
 import type { Theme } from "../theme";
 
@@ -29,47 +30,66 @@ const PRAYER_ROWS: { label: string; adhanKey: keyof PrayerTime; jamatKey: keyof 
   { label: "Isha", adhanKey: "isha", jamatKey: "isha_jamat", jamatTodayKey: "isha" },
 ];
 
+function addDays(date: Date, days: number): Date {
+  const d = new Date(date);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
 export default function MasjidDetailScreen() {
   const theme = useTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const { params } = useRoute<DetailRoute>();
   const [masjid, setMasjid] = useState<Masjid | null>(null);
+  const [locationId, setLocationId] = useState<string | null>(null);
   const [adhan, setAdhan] = useState<PrayerTime | null>(null);
-  const [todayJamat, setTodayJamat] = useState<TodayJamat | null>(null);
+  const [dayJamat, setDayJamat] = useState<TodayJamat | null>(null);
   const [loading, setLoading] = useState(true);
+  const [dayLoading, setDayLoading] = useState(false);
+  // 0 = today, +1 = tomorrow, -1 = yesterday, etc. — lets you browse any
+  // day's Azan/Iqama times, not just today's.
+  const [dayOffset, setDayOffset] = useState(0);
 
+  const viewDate = useMemo(() => addDays(new Date(), dayOffset), [dayOffset]);
+
+  // Masjid details + the default location only need loading once.
   useEffect(() => {
     (async () => {
       setLoading(true);
-      const { data: m } = await supabase
-        .from("masjids")
-        .select("*")
-        .eq("id", params.id)
-        .single();
+      const [{ data: m }, { data: loc }] = await Promise.all([
+        supabase.from("masjids").select("*").eq("id", params.id).single(),
+        supabase.from("locations").select("id").eq("is_default", true).single(),
+      ]);
       setMasjid((m as Masjid) ?? null);
-      // Prefer today's exact time from the masjid's yearly Jamat calendar if
-      // it has uploaded one; falls back to the fixed *_jamat columns below.
-      setTodayJamat(await getTodayJamat(params.id));
-
-      const { data: loc } = await supabase
-        .from("locations")
-        .select("id")
-        .eq("is_default", true)
-        .single();
-      if (loc) {
-        const { month, day } = todayMonthDay();
-        const { data: p } = await supabase
-          .from("prayer_times")
-          .select("*")
-          .eq("location_id", loc.id)
-          .eq("month", month)
-          .eq("day", day)
-          .maybeSingle();
-        setAdhan((p as PrayerTime) ?? null);
-      }
+      setLocationId((loc as { id: string } | null)?.id ?? null);
       setLoading(false);
     })();
   }, [params.id]);
+
+  // Azan/Iqama times depend on which day is being viewed.
+  useEffect(() => {
+    if (!locationId) return;
+    (async () => {
+      setDayLoading(true);
+      const { month, day } = todayMonthDay(viewDate);
+      const [{ data: p }, jamat] = await Promise.all([
+        supabase
+          .from("prayer_times")
+          .select("*")
+          .eq("location_id", locationId)
+          .eq("month", month)
+          .eq("day", day)
+          .maybeSingle(),
+        // Prefer this day's exact time from the masjid's yearly Jamat
+        // calendar if it has uploaded one; falls back to the fixed
+        // *_jamat columns (which don't vary by day) otherwise.
+        getJamatForDate(params.id, viewDate),
+      ]);
+      setAdhan((p as PrayerTime) ?? null);
+      setDayJamat(jamat);
+      setDayLoading(false);
+    })();
+  }, [params.id, locationId, viewDate]);
 
   if (loading) {
     return (
@@ -92,6 +112,15 @@ export default function MasjidDetailScreen() {
     const url = `https://maps.google.com/?q=${masjid.latitude},${masjid.longitude}(${encodeURIComponent(masjid.name)})`;
     Linking.openURL(url);
   }
+
+  const dayLabel =
+    dayOffset === 0
+      ? "Today"
+      : dayOffset === 1
+      ? "Tomorrow"
+      : dayOffset === -1
+      ? "Yesterday"
+      : viewDate.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.pageBg }}>
@@ -120,32 +149,56 @@ export default function MasjidDetailScreen() {
           )}
           {masjid.description && <Text style={styles.description}>{masjid.description}</Text>}
 
+          <View style={styles.dayNav}>
+            <TouchableOpacity onPress={() => setDayOffset((d) => d - 1)} style={styles.dayNavButton}>
+              <Ionicons name="chevron-back" size={18} color={theme.colors.accent} />
+            </TouchableOpacity>
+            <Text style={styles.dayNavLabel}>{dayLabel}</Text>
+            <TouchableOpacity onPress={() => setDayOffset((d) => d + 1)} style={styles.dayNavButton}>
+              <Ionicons name="chevron-forward" size={18} color={theme.colors.accent} />
+            </TouchableOpacity>
+            {dayOffset !== 0 && (
+              <TouchableOpacity onPress={() => setDayOffset(0)} style={styles.dayNavToday}>
+                <Text style={styles.dayNavTodayText}>Today</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
           <View style={styles.table}>
             <View style={styles.tableHeaderRow}>
               <Text style={[styles.tableHeaderCell, { flex: 1.2 }]}>Prayer</Text>
               <Text style={styles.tableHeaderCell}>Azan</Text>
               <Text style={styles.tableHeaderCell}>Iqama</Text>
             </View>
-            {PRAYER_ROWS.map((row) => (
-              <View key={row.label} style={styles.tableRow}>
-                <Text style={[styles.tableCellLabel, { flex: 1.2 }]}>{row.label}</Text>
-                <Text style={styles.tableCell}>
-                  {adhan ? (adhan[row.adhanKey] as string) : "—"}
-                </Text>
-                <Text style={styles.tableCell}>
-                  {todayJamat?.[row.jamatTodayKey] ?? (masjid[row.jamatKey] as string | null) ?? "—"}
-                </Text>
-              </View>
-            ))}
-            {(todayJamat?.jumma ?? masjid.jumma_jamat) && (
-              <View style={styles.tableRow}>
-                <Text style={[styles.tableCellLabel, { flex: 1.2 }]}>Jumu'ah</Text>
-                <Text style={styles.tableCell}>—</Text>
-                <Text style={styles.tableCell}>{todayJamat?.jumma ?? masjid.jumma_jamat}</Text>
-              </View>
-            )}
-            {todayJamat && (
-              <Text style={styles.calendarNote}>Today's exact Jamat times from this masjid's yearly calendar.</Text>
+            {dayLoading ? (
+              <ActivityIndicator color={theme.colors.accent} style={{ marginVertical: 20 }} />
+            ) : (
+              <>
+                {PRAYER_ROWS.map((row) => (
+                  <View key={row.label} style={styles.tableRow}>
+                    <Text style={[styles.tableCellLabel, { flex: 1.2 }]}>{row.label}</Text>
+                    <Text style={styles.tableCell}>
+                      {adhan ? formatTime12h(adhan[row.adhanKey] as string) : "—"}
+                    </Text>
+                    <Text style={styles.tableCell}>
+                      {formatTime12h(dayJamat?.[row.jamatTodayKey] ?? (masjid[row.jamatKey] as string | null)) ?? "—"}
+                    </Text>
+                  </View>
+                ))}
+                {(dayJamat?.jumma ?? masjid.jumma_jamat) && (
+                  <View style={styles.tableRow}>
+                    <Text style={[styles.tableCellLabel, { flex: 1.2 }]}>Jumu'ah</Text>
+                    <Text style={styles.tableCell}>—</Text>
+                    <Text style={styles.tableCell}>{formatTime12h(dayJamat?.jumma ?? masjid.jumma_jamat)}</Text>
+                  </View>
+                )}
+                {dayJamat && (
+                  <Text style={styles.calendarNote}>
+                    {dayLabel === "Today" ? "Today's" : `${dayLabel}'s`} exact Jamat times from this masjid's yearly
+                    calendar.
+                  </Text>
+                )}
+              </>
             )}
           </View>
         </View>
@@ -177,8 +230,40 @@ function makeStyles(theme: Theme) {
     metaText: { fontSize: 14, color: theme.colors.textMuted },
     link: { color: theme.colors.accent, fontWeight: "600" },
     description: { fontSize: 14, color: theme.colors.textMuted, marginTop: 8, lineHeight: 20 },
-    table: {
+    dayNav: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 4,
       marginTop: 20,
+    },
+    dayNavButton: {
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      backgroundColor: theme.colors.cardBg,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    dayNavLabel: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: theme.colors.textPrimary,
+      minWidth: 100,
+      textAlign: "center",
+    },
+    dayNavToday: {
+      marginLeft: 8,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: theme.radius.pill,
+      backgroundColor: theme.colors.accent,
+    },
+    dayNavTodayText: { color: "white", fontSize: 11, fontWeight: "700" },
+    table: {
+      marginTop: 12,
       borderRadius: theme.radius.md,
       backgroundColor: theme.colors.cardBg,
       borderWidth: 1,

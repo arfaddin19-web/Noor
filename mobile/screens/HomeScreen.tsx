@@ -21,7 +21,8 @@ import { PrayerTime, Location, Masjid } from "../lib/types";
 import { getCurrentPrayer, getNextPrayer, hasPrayerTimeArrived, todayMonthDay } from "../lib/prayerLogic";
 import { formatHijri } from "../lib/hijri";
 import { getHomeCity, getHomeMasjidId } from "../lib/homeMasjid";
-import { getTodayJamat, TodayJamat } from "../lib/masjidJamat";
+import { getJamatForDate, getNextJamat, TodayJamat } from "../lib/masjidJamat";
+import { formatTime12h } from "../lib/timeFormat";
 import { getQuranActivityToday } from "../lib/quranProgress";
 import { getTodaySalatChecklist, toggleSalat, SALAT_ORDER, SalatChecklist } from "../lib/salatChecklist";
 import { getActiveNotices, Notice } from "../lib/notices";
@@ -82,22 +83,6 @@ const GRID_ITEMS: GridItem[] = [
   { key: "Account", label: "Account", set: "ion", icon: "person-outline" },
 ];
 
-const JAMAT_KEY_FOR_LABEL: Record<string, keyof Masjid> = {
-  Fajr: "fajr_jamat",
-  Dhuhr: "dhuhr_jamat",
-  Asr: "asr_jamat",
-  Maghrib: "maghrib_jamat",
-  Isha: "isha_jamat",
-};
-
-const JAMAT_TODAY_KEY_FOR_LABEL: Record<string, keyof TodayJamat> = {
-  Fajr: "fajr",
-  Dhuhr: "dhuhr",
-  Asr: "asr",
-  Maghrib: "maghrib",
-  Isha: "isha",
-};
-
 export default function HomeScreen() {
   const theme = useTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
@@ -112,6 +97,7 @@ export default function HomeScreen() {
   const [tomorrow, setTomorrow] = useState<PrayerTime | null>(null);
   const [homeMasjid, setHomeMasjid] = useState<Masjid | null>(null);
   const [todayJamat, setTodayJamat] = useState<TodayJamat | null>(null);
+  const [tomorrowJamat, setTomorrowJamat] = useState<TodayJamat | null>(null);
   const [notices, setNotices] = useState<Notice[]>([]);
   const [ayahOfDay, setAyahOfDay] = useState<AyahOfDay | null>(null);
   const hadithOfDay = useMemo(() => getHadithForDate(), []);
@@ -148,10 +134,11 @@ export default function HomeScreen() {
     setQuranActivity(quranCount);
     setNotices(activeNotices);
 
+    const nextDate = new Date();
+    nextDate.setDate(nextDate.getDate() + 1);
+
     if (loc) {
       const { month, day } = todayMonthDay();
-      const nextDate = new Date();
-      nextDate.setDate(nextDate.getDate() + 1);
       const tmrw = todayMonthDay(nextDate);
 
       const [todayRes, tomorrowRes] = await Promise.all([
@@ -175,15 +162,18 @@ export default function HomeScreen() {
     }
 
     if (homeMasjidId) {
-      const [{ data }, jamatToday] = await Promise.all([
+      const [{ data }, jamatToday, jamatTomorrow] = await Promise.all([
         supabase.from("masjids").select("*").eq("id", homeMasjidId).maybeSingle(),
-        getTodayJamat(homeMasjidId),
+        getJamatForDate(homeMasjidId, new Date()),
+        getJamatForDate(homeMasjidId, nextDate),
       ]);
       setHomeMasjid((data as Masjid) ?? null);
       setTodayJamat(jamatToday);
+      setTomorrowJamat(jamatTomorrow);
     } else {
       setHomeMasjid(null);
       setTodayJamat(null);
+      setTomorrowJamat(null);
     }
 
     hasLoadedRef.current = true;
@@ -239,11 +229,14 @@ export default function HomeScreen() {
 
   const next = today ? getNextPrayer(today, tomorrow, now) : null;
   const current = today ? getCurrentPrayer(today, now) : null;
-  const nextJamat =
-    next && homeMasjid
-      ? todayJamat?.[JAMAT_TODAY_KEY_FOR_LABEL[next.label]] ??
-        (homeMasjid[JAMAT_KEY_FOR_LABEL[next.label]] as string | null)
-      : null;
+  // The next Jamat actually about to happen — not necessarily the same
+  // prayer as `next` above, since that's the next Adhan/window, and the
+  // current window's own Jamat may not have happened yet (e.g. we're in
+  // Dhuhr's window but Dhuhr's Jamat hasn't occurred yet — showing Asr's
+  // Jamat there would be wrong). See lib/masjidJamat.ts.
+  const nextJamat = homeMasjid
+    ? getNextJamat({ today: todayJamat, tomorrow: tomorrowJamat, masjid: homeMasjid, now })
+    : null;
 
   const doneCount = SALAT_ORDER.filter((p) => checklist[p.key]).length;
 
@@ -347,13 +340,17 @@ export default function HomeScreen() {
                 </View>
               )}
               {homeMasjid && (
-                <View style={styles.jamatBanner}>
+                <TouchableOpacity
+                  style={styles.jamatBanner}
+                  onPress={() => navigation.navigate("MasjidDetail", { id: homeMasjid.id })}
+                >
                   <Text style={styles.jamatBannerText}>
                     {nextJamat
-                      ? `Jamat at ${homeMasjid.name}: ${nextJamat}`
-                      : `${homeMasjid.name} hasn't set a Jamat time for ${next?.label ?? "this prayer"} yet`}
+                      ? `Jamat (${nextJamat.label}) at ${homeMasjid.name}: ${formatTime12h(nextJamat.time)}`
+                      : `${homeMasjid.name} hasn't set any Jamat times yet`}
                   </Text>
-                </View>
+                  <Ionicons name="chevron-forward" size={14} color={theme.colors.textOnDarkMuted} />
+                </TouchableOpacity>
               )}
             </View>
           )}
@@ -510,12 +507,16 @@ function makeStyles(theme: Theme) {
     nowPrayerLabel: { color: theme.colors.gold, fontSize: 18, fontWeight: "700", marginTop: 4 },
     nowPrayerTime: { color: theme.colors.textOnDark, fontSize: 26, fontWeight: "800", marginTop: 2 },
     jamatBanner: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 8,
       marginTop: 14,
       paddingTop: 14,
       borderTopWidth: 1,
       borderTopColor: theme.colors.glassBorder,
     },
-    jamatBannerText: { color: theme.colors.textOnDark, fontSize: 13, fontWeight: "600" },
+    jamatBannerText: { flex: 1, color: theme.colors.textOnDark, fontSize: 13, fontWeight: "600" },
     skyline: {
       position: "absolute",
       bottom: -6,

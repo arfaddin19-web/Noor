@@ -17,6 +17,7 @@ import ScreenBackground from "../components/ScreenBackground";
 import { supabase } from "../lib/supabase";
 import { Masjid, JAMAT_LABELS } from "../lib/types";
 import { distanceKm, formatDistance } from "../lib/geo";
+import { formatTime12h } from "../lib/timeFormat";
 import { useTheme } from "../lib/ThemeContext";
 import type { Theme } from "../theme";
 
@@ -147,7 +148,7 @@ export default function MasjidsScreen() {
                   item[key] ? (
                     <View key={key} style={styles.jamatChip}>
                       <Text style={styles.jamatLabel}>{label}</Text>
-                      <Text style={styles.jamatTime}>{item[key]}</Text>
+                      <Text style={styles.jamatTime}>{formatTime12h(item[key] as string)}</Text>
                     </View>
                   ) : null
                 )}

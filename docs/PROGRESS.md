@@ -273,6 +273,23 @@ up correctly in the mobile app.
     screen's at-a-glance time chips intentionally keep showing the fixed/fallback value
     only, to avoid one date-lookup query per masjid in a long list — exact per-day times
     are only fetched for the one masjid a screen is actually about.
+    Follow-up fixes: Azan/Iqama times in Masjid Detail's table now show **12-hour
+    AM/PM** (`lib/timeFormat.ts`'s `formatTime12h`) instead of 24h, applied
+    consistently to the Masjids list's Jamat chips and Home's Jamat banner too, since
+    showing the same data in mixed formats across screens would be worse than the
+    original complaint. Masjid Detail also got **day navigation** (‹ Today › with a
+    "Today" jump-back button) so Jamat/Azan times for any day — not just today — can be
+    browsed, e.g. checking Friday's times while it's still Tuesday.
+    Also fixed a real bug: Home's "Jamat at…" banner was built from the next **Adhan**
+    window (`getNextPrayer`), so the instant Dhuhr's Adhan passed it jumped straight to
+    showing Asr's Jamat — even if Dhuhr's Jamat (which happens shortly after Dhuhr's
+    Adhan, not at the end of its window) hadn't happened yet. Replaced with
+    `getNextJamat` (`lib/masjidJamat.ts`), which walks today's actual Jamat times in
+    order and returns whichever one is genuinely still ahead of the clock (falling back
+    to tomorrow's Fajr once all of today's have passed) — so it always names the
+    correct upcoming prayer, which may now differ from the "Next prayer" column above
+    it. The banner is also now tappable, opening that masjid's full detail/day-table
+    screen.
   - **Ask**: AI Q&A chat UI wired to and verified working against the deployed
     `ask-ai` Supabase Edge Function (see below).
   - **Account is now a one-time registration, no password at all** — Name, Phone,
