@@ -243,7 +243,12 @@ up correctly in the mobile app.
     city you haven't traveled to yet — the list no longer depends on GPS permission
     being granted (distance is shown when available, just omitted otherwise).
   - **Halal Food**: split into its own screen/grid tile (previously combined with
-    Masjids under one "Nearby" toggle) — sorted by GPS distance from the device.
+    Masjids under one "Nearby" toggle) — sorted by GPS distance from the device, with
+    the same **city search bar** and graceful no-location fallback Masjids has (the
+    list loads independently of GPS permission now — distance is just omitted when
+    it isn't available, instead of the whole screen showing nothing). A new `city`
+    column (`0015_halal_food_city.sql`, mirrors `masjids.city` from `0007`) backs
+    the search, editable from the admin dashboard's Halal Food form.
   - **Masjid Detail** / **Halal Food Detail**: hero image (placeholder if none set),
     address/phone, and for masjids a Prayer/Azan/Iqama table; a Directions button opens
     Maps.
@@ -398,8 +403,11 @@ Worth keeping in mind if something looks broken again:
   audio player; worth adding later if the user wants it, but not faked in the meantime.
 - No Hindi or Nepali hadith translations exist in any free source we could find; Urdu
   is offered instead. Worth revisiting if a Hindi/Nepali source turns up.
-- Halal food doesn't have the same city search bar Masjids just got — worth adding for
-  consistency if that turns out to matter as much there.
+- ~~Halal food doesn't have the same city search bar Masjids just got~~ — done, see above.
+- **Action needed for the Halal Food city field**: run
+  `supabase/migrations/0015_halal_food_city.sql` in the Supabase SQL Editor (same as
+  every migration) — until then the `city` column doesn't exist yet, so the new search
+  box has nothing to search by (name/address search still work).
 - Adhan sound toggle controls whether the local notification plays a sound at all —
   Expo Go / local notifications can't ship a custom Adhan audio file without an EAS
   build, so this is scoped honestly to sound on/off rather than a specific Adhan clip.

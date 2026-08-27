@@ -56,6 +56,7 @@ export interface HalalFoodPlace {
   name: string;
   category: string;
   address: string | null;
+  city: string | null;
   latitude: number;
   longitude: number;
   phone: string | null;

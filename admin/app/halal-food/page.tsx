@@ -9,7 +9,7 @@ import { HalalFoodPlace, FoodCategory } from "@/lib/types";
 const CATEGORIES: FoodCategory[] = ["restaurant", "cafe", "bakery", "grocery", "butcher", "other"];
 
 const emptyForm = {
-  name: "", category: "restaurant" as FoodCategory, address: "", latitude: "", longitude: "",
+  name: "", category: "restaurant" as FoodCategory, address: "", city: "", latitude: "", longitude: "",
   phone: "", halal_certified: false, description: "",
 };
 
@@ -35,6 +35,7 @@ function HalalFoodManager() {
       name: form.name,
       category: form.category,
       address: form.address || null,
+      city: form.city || null,
       latitude: parseFloat(form.latitude),
       longitude: parseFloat(form.longitude),
       phone: form.phone || null,
@@ -69,6 +70,7 @@ function HalalFoodManager() {
           {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
         <input placeholder="Address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} className="col-span-2 rounded-md border border-gray-300 px-3 py-2 text-sm" />
+        <input placeholder="City / District (e.g. Kathmandu)" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} className="rounded-md border border-gray-300 px-3 py-2 text-sm" />
         <input required placeholder="Latitude" value={form.latitude} onChange={(e) => setForm({ ...form, latitude: e.target.value })} className="rounded-md border border-gray-300 px-3 py-2 text-sm" />
         <input required placeholder="Longitude" value={form.longitude} onChange={(e) => setForm({ ...form, longitude: e.target.value })} className="rounded-md border border-gray-300 px-3 py-2 text-sm" />
         <input placeholder="Phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="rounded-md border border-gray-300 px-3 py-2 text-sm" />
@@ -98,7 +100,14 @@ function HalalFoodManager() {
             {!loading && items.length === 0 && <tr><td className="px-3 py-4 text-gray-400" colSpan={5}>No places yet.</td></tr>}
             {items.map((item) => (
               <tr key={item.id} className="border-t border-gray-100">
-                <td className="px-3 py-2 font-medium">{item.name}</td>
+                <td className="px-3 py-2 font-medium">
+                  {item.name}
+                  {(item.city || item.address) && (
+                    <div className="text-xs font-normal text-gray-400">
+                      {[item.city, item.address].filter(Boolean).join(" — ")}
+                    </div>
+                  )}
+                </td>
                 <td className="px-3 py-2 capitalize text-gray-500">{item.category}</td>
                 <td className="px-3 py-2">{item.halal_certified ? "✅" : "—"}</td>
                 <td className="px-3 py-2">
