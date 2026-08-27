@@ -149,8 +149,22 @@ up correctly in the mobile app.
     which was hard to read for Urdu's script.
     Hindi/Nepali translations aren't published by any free hadith source we could find —
     Urdu is offered as the closest available alternate-language reading.
-    *Muntakhab Ahadith is still listed as unavailable* — no free, verified digital source
-    was found for it.
+  - **Muntakhab Ahadith (English)** is a full entry in Books & Hadith too, but shown
+    differently from the others: as **350 scanned page images** (`MuntakhabAhadithScreen`,
+    `lib/muntakhabAhadithPages.ts`), not extracted text. The user's PDF interleaves Arabic
+    and English tightly around every single hadith (unlike Bahishti Zewar's continuous
+    English prose) — text extraction was tried three different ways (default, layout-
+    preserving, and splitting each page into left/right column images before reading) and
+    genuinely scrambled sentence order every time, e.g. fusing two unrelated hadith into
+    one nonsense sentence. That's not an acceptable shortcut for source text where
+    misattributing what a hadith says actually matters, so instead each PDF page (each one
+    a two-book-page spread, matching how the original was scanned) is rendered as a JPEG
+    (`pdftoppm`, 85dpi/quality 40 — chosen to balance legibility against the ~36MB this
+    adds to the app; users pinch-to-zoom for detail) and shown in a swipeable page viewer,
+    remembering the last page read. This adds real weight to the app's download size — the
+    exported bundle went from ~9MB to ~49MB — worth flagging to the user; a lighter-weight
+    option later would be hosting these in Supabase Storage and fetching on demand instead
+    of bundling them all, at the cost of needing network access to read this one book.
   - **Bahishti Zewar (English)** is now a full entry in Books & Hadith — 93 chapters,
     bundled locally (`lib/bahishtiZewar.ts`, `assets/bahishtiZewar/chapters.json`, ~2MB),
     with a search box over chapter titles and a simple paragraph-by-paragraph reader
@@ -345,8 +359,12 @@ Worth keeping in mind if something looks broken again:
   before being shown to users as authoritative, since precision in rulings matters a
   lot for this book specifically. Scope/timeline depends on how that review is
   arranged.
-- **Waiting on the user**: the Muntakhab Ahadith English PDF, to add as a new Books &
-  Hadith entry the same way Bahishti Zewar was.
+- **Muntakhab Ahadith is page images, not searchable/selectable text** — see above. If a
+  cleaner-scanned source PDF turns up later (Arabic and English on separate pages rather
+  than interleaved per-hadith), text extraction could be revisited.
+- **App download size grew ~40MB** from bundling Muntakhab Ahadith's page images directly.
+  Worth moving to on-demand loading from Supabase Storage if that size becomes a real
+  problem for users on limited data.
 - Ramadan Timetable / Islamic Calendar dates are computed from a standard tabular
   Hijri calendar, not moon sighting — every screen using them says so, but they should
   still be treated as estimates, not an authoritative Ramadan/Eid announcement.

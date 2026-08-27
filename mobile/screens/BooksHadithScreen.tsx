@@ -38,6 +38,8 @@ export default function BooksHadithScreen() {
               onPress={() => {
                 if (item.key === "bahishti") {
                   navigation.navigate("BahishtiZewar");
+                } else if (item.key === "muntakhab") {
+                  navigation.navigate("MuntakhabAhadith");
                 } else if (item.available) {
                   navigation.navigate("HadithBook", { key: item.key });
                 } else {

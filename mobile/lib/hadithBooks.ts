@@ -13,9 +13,7 @@ export interface HadithBook {
 // Real, verified editions from https://github.com/fawazahmed0/hadith-api (checked
 // against its editions list). Hindi and Nepali translations are not published by
 // this (or any free) source we could find, so Urdu is offered as the closest
-// available alternative-language reading. Muntakhab Ahadith and Bahishti Zewar
-// aren't available as structured, freely-licensed digital text anywhere we could
-// verify, so they're listed honestly as unavailable rather than invented.
+// available alternative-language reading.
 export const HADITH_BOOKS: HadithBook[] = [
   {
     key: "bukhari",
@@ -62,9 +60,11 @@ export const HADITH_BOOKS: HadithBook[] = [
   {
     key: "muntakhab",
     name: "Muntakhab Ahadith",
-    available: false,
-    unavailableNote:
-      "We couldn't find a free, verified digital source for this collection, so nothing is shown here rather than guessing at hadith text. If you have a licensed source we can use, let us know and we'll add it.",
+    available: true,
+    // Not extracted to text like the others — shown as scanned page images
+    // instead (see lib/muntakhabAhadithPages.ts and the note at the top of
+    // MuntakhabAhadithScreen.tsx for why). BooksHadithScreen routes this key
+    // to its own screen instead of the generic HadithBook reader.
   },
   {
     key: "bahishti",
