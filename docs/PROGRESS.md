@@ -91,7 +91,12 @@ up correctly in the mobile app.
     clashed with it). A small drawn Kaaba icon (not the 🕋 emoji, which renders
     inconsistently across devices/fonts) sits directly on the dial at the Qibla bearing —
     in place of whatever plain tick would otherwise be there — with the needle pointing at
-    it; alignment means that icon meets the fixed top pointer. (Intentionally skipped: a
+    it; alignment means that icon meets the fixed top pointer. Sized down from a 300px to
+    a 250px ring per feedback. *Not yet pixel-matched to the user's reference photo* — this
+    redesign was done from a description/memory of it rather than the actual file (it
+    wasn't saved on disk, only shown inline in an earlier turn), so it's a good-faith
+    "iPhone Compass style" build rather than an exact copy; asked the user to resend the
+    photo to match it precisely. (Intentionally skipped: a
     live map thumbnail — decorative/heavy, not core functionality.)
   - **Qur'an list**: "Last Read" hero card (jumps back into whichever Surah/Juz/Page you
     last opened), a **Bookmarks** row (long-press a chip to remove it), a Sura/Page/Juz
@@ -162,7 +167,13 @@ up correctly in the mobile app.
     each getting a full paragraph gap in the reader. Fixed by ignoring blank lines entirely
     and instead inserting a paragraph break at each numbered list marker ("1. ", "2. " …) —
     this book's own consistent way of marking a ruling — with plain prose sections grouped
-    into readable ~2-4 sentence paragraphs instead. *Honest caveat*: this is OCR'd text from
+    into readable ~2-4 sentence paragraphs instead. That marker regex was then loosened
+    further after a second pass still showed numbers running together in places: it
+    originally required a capital letter right after "N. " to count as a real marker, but
+    the source's two-column OCR reflow sometimes glues a stray marker onto a lowercase
+    mid-sentence continuation (e.g. "...man does not 8. have the power..."), which the
+    stricter check let through unsplit. Relaxing it to accept any letter after the marker
+    cut this from 227 affected paragraphs down to effectively none. *Honest caveat*: this is OCR'd text from
     a scan, not a clean digital edition — occasional word-order glitches from the original's
     two-column layout are possible, and a handful of chapter titles have minor OCR artifacts
     (e.g. a stray apostrophe read as a space); the content itself wasn't altered or
@@ -185,7 +196,10 @@ up correctly in the mobile app.
     big, primary number** in each cell (this is an Islamic calendar first), with the
     Gregorian date shown smaller underneath it (the reverse of a typical Gregorian-first
     calendar), today highlighted, a dot on any date with an Islamic event, and ‹ › month
-    navigation — above two tabs. **Events** lists Islamic New Year, Ashura, Mawlid, Isra
+    navigation — above two tabs. The month header above the grid follows the same
+    principle: the **Hijri month/year is the big heading**, with the Gregorian month/year
+    shown smaller beneath it (this was flipped the wrong way round at first — the
+    Gregorian month reading bigger — and got corrected to match the day numbers). **Events** lists Islamic New Year, Ashura, Mawlid, Isra
     & Mi'raj, start of Ramadan, Laylatul Qadr, Eid al-Fitr, start of Dhu al-Hijjah, Day of
     Arafah, and Eid al-Adha for the current Hijri year, each with an "in N days" badge,
     computed entirely offline. **Ramadan** shows a real Sehri-ends / Iftar table for every

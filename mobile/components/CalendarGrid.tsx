@@ -90,10 +90,10 @@ export default function CalendarGrid() {
           <Ionicons name="chevron-back" size={18} color={theme.colors.accent} />
         </TouchableOpacity>
         <View style={{ alignItems: "center" }}>
-          <Text style={styles.monthLabel}>{monthLabel}</Text>
-          <Text style={styles.hijriLabel}>
+          <Text style={styles.monthLabel}>
             {HIJRI_MONTHS[monthHijri.month - 1]} {monthHijri.year} AH
           </Text>
+          <Text style={styles.hijriLabel}>{monthLabel}</Text>
         </View>
         <TouchableOpacity onPress={goNextMonth} style={styles.navButton}>
           <Ionicons name="chevron-forward" size={18} color={theme.colors.accent} />
@@ -145,6 +145,9 @@ function makeStyles(theme: Theme) {
       alignItems: "center",
       justifyContent: "center",
     },
+    // Named for their original role (Gregorian big / Hijri small) but now
+    // applied the other way round in the JSX above — Hijri month is the
+    // primary heading, Gregorian is the small subtext underneath it.
     monthLabel: { fontSize: 15, fontWeight: "800", color: theme.colors.textPrimary },
     hijriLabel: { fontSize: 11, color: theme.colors.accent, fontWeight: "700", marginTop: 1 },
     weekdayRow: { flexDirection: "row", marginTop: 14 },

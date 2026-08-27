@@ -8,10 +8,10 @@ import type { Theme } from "../theme";
 const KAABA_LAT = 21.4225;
 const KAABA_LNG = 39.8262;
 
-const RING_SIZE = 300;
-const TICK_RADIUS = 138;
-const LABEL_RADIUS = 110;
-const KAABA_RADIUS = 128;
+const RING_SIZE = 250;
+const TICK_RADIUS = 115;
+const LABEL_RADIUS = 92;
+const KAABA_RADIUS = 107;
 const ALIGN_TOLERANCE_DEG = 6;
 
 // Apple Compass-style dial: big cardinal letters at N/E/S/W, plain degree
@@ -265,7 +265,7 @@ function makeStyles(theme: Theme) {
     backgroundColor: "#000",
   },
   muted: { color: "#9a9a9a", textAlign: "center" },
-  headingReadout: { fontSize: 56, fontWeight: "300", color: "white", letterSpacing: 1 },
+  headingReadout: { fontSize: 46, fontWeight: "300", color: "white", letterSpacing: 1 },
   headingReadoutAligned: { color: "#3ecf6a" },
   qiblaSubtext: { fontSize: 13, color: "#9a9a9a", marginTop: 2, marginBottom: 20, fontWeight: "600" },
   compassWrap: {
@@ -314,18 +314,18 @@ function makeStyles(theme: Theme) {
   },
   needleTop: {
     position: "absolute",
-    top: 30,
+    top: 25,
     left: RING_SIZE / 2 - 1,
     width: 2,
-    height: RING_SIZE / 2 - 52,
+    height: RING_SIZE / 2 - 43,
     backgroundColor: "#e0342a",
   },
   needleBottom: {
     position: "absolute",
-    bottom: 22,
+    bottom: 18,
     left: RING_SIZE / 2 - 1,
     width: 2,
-    height: RING_SIZE / 2 - 22,
+    height: RING_SIZE / 2 - 18,
     backgroundColor: "#4a4a4a",
   },
   centerHub: {
